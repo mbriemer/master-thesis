@@ -42,6 +42,12 @@ def inverse_transform_tanh(y, lower=1, upper=3):
     x = (2 * y - (lower + upper)) / (upper - lower)
     return math.atanh(x)
 
+def make_hook(name): # todo delete
+    def hook_fun(grad):
+        print(name)
+        return grad
+    return hook_fun
+
 
 class PolakRibiereCG(torch.optim.Optimizer):
     def __init__(self, params, max_iter=50, tol=1e-5):
@@ -137,7 +143,8 @@ class Generator(torch.nn.Module):
         self.in_features = in_features
         self.out_features = out_features
         self.theta = Parameter(torch.Tensor(9))
-        self.reset_parameters()    
+        self.reset_parameters()
+        self.score_function_factor_moving_average = None # todo remove    
 
     def reset_parameters(self):
         self.theta.data = torch.zeros_like(self.theta)
@@ -207,6 +214,143 @@ class Generator(torch.nn.Module):
         d2_smooth = smoothing_function(x = logw2m, lambda_val = lambda_val)
         return torch.stack([logw1, d1_smooth, logw2, d2_smooth], dim = -1)
     
+    def get_MLL_loss(self, true_samples, num_latent_samples_per_observed_sample=1):
+
+        if self.score_function_factor_moving_average is None:
+            self.score_function_factor_moving_average = torch.ones(true_samples.shape[0])
+
+
+        lambda_val = 1
+        logit_mu_1, logit_mu_2, logit_gamma_1, logit_gamma_2, log_sigma_1, log_sigma_2, arctanh_rho_s, arctanh_rho_t, beta = self.theta
+
+        mu_1 = transform_sigmoid(logit_mu_1, lower=1., upper=3.)
+        mu_2 = transform_sigmoid(logit_mu_2, lower=1., upper=3.)
+        gamma_1 = transform_sigmoid(logit_gamma_1, lower=-0.5, upper=1.5)
+        gamma_2 = transform_sigmoid(logit_gamma_2, lower=-1., upper=1.)
+        sigma_1 = transform_sigmoid(log_sigma_1, lower=0., upper=2.)
+        sigma_2 = transform_sigmoid(log_sigma_2, lower=0., upper=2.)
+        rho_s = torch.tanh(arctanh_rho_s)
+        rho_t = torch.tanh(arctanh_rho_t)
+
+        beta = beta.detach()
+        rho_t = rho_t.detach()
+
+        eps_mu = torch.zeros(4)
+
+        #eps_sigma = self.theta[4:8].sigmoid().diag()
+
+        eps_sigma = torch.tensor([[sigma_1**2, rho_s * sigma_1 * sigma_2, rho_t * sigma_1**2, rho_s * rho_t * sigma_1 * sigma_2],
+                                [rho_s * sigma_1 * sigma_2, sigma_2**2, rho_s * rho_t * sigma_1 * sigma_2, rho_t * sigma_2**2],
+                                [rho_t * sigma_1**2, rho_s * rho_t * sigma_1 * sigma_2, sigma_1**2, rho_s * sigma_1 * sigma_2],
+                                [rho_s * rho_t * sigma_1 * sigma_2, rho_t * sigma_2**2, rho_s * sigma_1 * sigma_2, sigma_2**2]])
+        
+
+        # until here as before
+        
+        observed_log_wages = true_samples[:,::2]
+        observed_d1 = true_samples[:,1]
+        observed_d2 = true_samples[:,3]
+        
+        MLL_observed_epsilon = 0
+        CMLL_estimate_observed_decisions = 0.
+        for d1, d2 in [(1,1), (1,2), (2,1), (2,2)]:
+            mask = torch.logical_and((observed_d1-d1)<.5, (observed_d2-d2)<.5)
+            observed_log_wages_masked = observed_log_wages[mask]
+            mean_observed_log_wages_masked = torch.stack([
+                mu_1*(d1==1) + mu_2*(d1==2),
+                (mu_1+gamma_1*(d1==1))*(d2==1) + (mu_2+gamma_2*(d1==2))*(d2==2)
+                ])
+            observed_epsilon_masked = observed_log_wages_masked - mean_observed_log_wages_masked
+            
+            observed_values = observed_epsilon_masked
+            is_observed = torch.full((4,), False)
+            is_observed[d1-1] = True
+            is_observed[2+d2-1] = True
+            
+            # see Bishop 2.95-2.98
+            mean, var = eps_mu, eps_sigma
+            #var.register_hook(make_hook("var+ str(d1)+str(d2)"))
+            prec = torch.linalg.inv(var)
+            var12 = var[~is_observed][:,is_observed]
+            var22 = var[is_observed][:,is_observed]
+            mean1 = mean[~is_observed]
+            mean2 = mean[is_observed]
+            conditional_mean = mean1 + (var12 @ torch.linalg.inv(var22) @ (observed_values - mean2).T).T
+            conditional_prec = prec[~is_observed][:,~is_observed]
+
+            #conditional_mean.register_hook(make_hook("conditional_mean+ str(d1)+str(d2)"))
+            #conditional_prec.register_hook(make_hook("conditional_prec+ str(d1)+str(d2)"))
+            
+            marg_dist = torch.distributions.multivariate_normal.MultivariateNormal(mean2, var22)
+            cond_dist = torch.distributions.multivariate_normal.MultivariateNormal(conditional_mean, precision_matrix=conditional_prec)
+            
+            MLL_observed_epsilon += marg_dist.log_prob(observed_epsilon_masked).sum(-1)
+            assert marg_dist.log_prob(observed_epsilon_masked).shape == observed_epsilon_masked.shape[:1],\
+                marg_dist.log_prob(observed_epsilon_masked).shape
+            
+            if num_latent_samples_per_observed_sample != 1:
+                raise NotImplementedError
+            
+            latent_epsilon_masked_samples = cond_dist.sample(()).detach()
+            assert latent_epsilon_masked_samples.shape == observed_epsilon_masked.shape,\
+                (latent_epsilon_masked_samples.shape, observed_epsilon_masked.shape)
+            epsilon_masked = torch.empty((latent_epsilon_masked_samples.shape[0], 4))
+            epsilon_masked[:, is_observed] = observed_epsilon_masked
+            epsilon_masked[:, ~is_observed] = latent_epsilon_masked_samples
+            eps = epsilon_masked.reshape(-1,4)  # reshaping should have no effect for sample shape "()"
+            
+            # now the remainder of the forward function, with the partly observed partly sampled epsilon:
+                        
+            # Log wages at t = 1 for each sector
+
+            logw1m = torch.column_stack((mu_1 + eps[:, 0],
+                                    mu_2 + eps[:, 1]))
+
+            # Value function at t = 1 for each sector
+
+            logv1m = torch.column_stack((
+                torch.logaddexp(logw1m[:, 0], torch.log(beta) + logEexpmax(mu_1 + gamma_1, mu_2, sigma_1, sigma_2, rho_s)),
+                torch.logaddexp(logw1m[:, 1], torch.log(beta) + logEexpmax(mu_1, mu_2 + gamma_2, sigma_1, sigma_2, rho_s))
+            ))
+
+            # Sector choices at t = 1
+
+            d1_ = torch.argmax(logv1m, axis=1)
+
+            # Observed log wages at t = 1
+
+            logw1 = logv1m[torch.arange(epsilon_masked.shape[0]), d1_]
+
+            # Log wages at t == 2
+
+            logw2m = torch.column_stack((
+                mu_1 + gamma_1 * (d1_ == 0) + eps[:, 2],
+                mu_2 + gamma_2 * (d1_ == 1) + eps[:, 3]
+            ))
+
+            # % Observed log wages and sector choices at t = 2
+
+            logw2 = torch.max(logw2m, axis=1).values
+            d2_ = torch.argmax(logw2m, axis=1)
+
+            d1_smooth = smoothing_function(x = logv1m, lambda_val = lambda_val)
+            d2_smooth = smoothing_function(x = logw2m, lambda_val = lambda_val)
+            
+            #assert torch.allclose(observed_log_wages[mask], torch.stack([logw1, logw2], dim = -1)),\
+            #    (observed_log_wages[mask], torch.stack([logw1, logw2,], dim = -1))
+           
+            # score function estimation for the ML of d, not yet MLL
+            
+            score_function_factor = (d1==d1_)*(d2==d2_)
+            score_function_factor.detach_()  # just to be sure
+            score_function = cond_dist.log_prob(latent_epsilon_masked_samples)
+            #print(score_function_factor.shape, score_function.shape)
+            #print(latent_epsilon_masked_samples.shape, mask.shape, mask.sum())
+            CMLL_estimate_observed_decisions += ((score_function_factor / (self.score_function_factor_moving_average[mask] + 0.00001) - 1) * score_function).sum(0)
+            self.score_function_factor_moving_average[mask] *= .99
+            self.score_function_factor_moving_average[mask] += .01 * score_function_factor
+        return -(MLL_observed_epsilon + CMLL_estimate_observed_decisions)
+
     def extra_repr(self):
         return 'in_features={}, out_features={}'.format(
             self.in_features, self.out_features is not None
@@ -335,6 +479,79 @@ def train(Generator_object, Discriminator_object, criterion, inverse_theta, num_
                 
     return [all_mu_values, all_gamma_values, all_sigma_values, all_rho_values, all_discriminator_losses, all_generator_losses, iteration_numbers]
 
+def train_benjo(Generator_object, Discriminator_object, criterion, inverse_theta, num_iterations = 1500, num_samples = 300, num_repetitions = 10, d_every = 1, wd = 0.01):
+    
+    all_mu_values = [[] for _ in range(num_repetitions)]
+    all_gamma_values = [[] for _ in range(num_repetitions)]
+    all_sigma_values = [[] for _ in range(num_repetitions)]
+    all_rho_values = [[] for _ in range(num_repetitions)]
+    all_discriminator_losses = [[] for _ in range(num_repetitions)]
+    all_generator_losses = [[] for _ in range(num_repetitions)]
+    iteration_numbers = []
+
+    for rep in tqdm(range(num_repetitions)):
+
+        generator = Generator_object()
+        #discriminator = Discriminator_object()
+
+        #optimizerD = torch.optim.Adam(discriminator.parameters(), lr=1e-2, weight_decay=wd)
+        optimizerG = torch.optim.Adam(generator.parameters(), lr=1e-2)
+
+        true_generator = Generator_object()
+        true_generator.theta.data = inverse_theta
+
+        true_samples = true_generator.forward(num_samples).detach()
+
+        for i in tqdm(range(num_iterations)):
+            '''    
+            # Train the discriminator every 10 iterations
+            if i % d_every == 0:
+                optimizerD.zero_grad()
+                
+                #generator.theta.data[generator.theta.data > 10.] = 10.
+                fake_samples = generator.forward(num_samples)
+                
+                fake_logits = discriminator(fake_samples)  # Detach fake samples from the generator's graph
+                true_logits = discriminator(true_samples)
+                
+                discriminator_loss = criterion(fake_logits, torch.zeros_like(fake_logits)) + criterion(true_logits, torch.ones_like(true_logits))
+                
+                discriminator_loss.backward()
+                optimizerD.step()
+            '''
+            # Train the generator
+            optimizerG.zero_grad()
+            
+            generator_loss = generator.get_MLL_loss(true_samples)
+            #fake_logits = discriminator(fake_samples)
+            
+            #generator_loss = criterion(fake_logits, torch.ones_like(fake_logits))
+            
+            generator_loss.backward()
+            optimizerG.step()
+
+            # Current parameter values
+
+            new_mu = transform_sigmoid(generator.theta.data[0:2], lower=1., upper=3.).detach().cpu().numpy().copy()
+            new_gamma_1 = transform_sigmoid(generator.theta.data[2], lower=0.5, upper=1.5).detach().cpu().numpy().copy()
+            new_gamma_2 = transform_sigmoid(generator.theta.data[3], lower=-1., upper=1.).detach().cpu().numpy().copy()
+            new_sigma = transform_sigmoid(generator.theta.data[4:6], lower=0., upper=2.).detach().cpu().numpy().copy()
+
+            # Store current parameter values
+            all_mu_values[rep].append(new_mu)
+            all_gamma_values[rep].append([new_gamma_1, new_gamma_2])
+            all_sigma_values[rep].append(new_sigma)
+            all_rho_values[rep].append(torch.tanh(generator.theta.data[6:8]).detach().cpu().numpy())
+            all_discriminator_losses[rep].append(0)
+            all_generator_losses[rep].append(generator_loss.item())
+
+            if rep == 0:  # Only need to store iteration numbers once
+                    iteration_numbers.append(i)
+                
+    return [all_mu_values, all_gamma_values, all_sigma_values, all_rho_values, all_discriminator_losses, all_generator_losses, iteration_numbers]
+
+
+
 def plot_results(results):
     
     all_mu_values, all_gamma_values, all_sigma_values, all_rho_values, all_discriminator_losses, all_generator_losses, iteration_numbers = results
@@ -444,7 +661,7 @@ criterion = nn.BCEWithLogitsLoss()
 #all_mu_values, all_gamma_values, all_sigma_values, all_rho_values, all_discriminator_losses, all_generator_losses, iteration_numbers = train(Generator, Discriminator, criterion, inverse_theta)
 #plot_results(all_mu_values, all_gamma_values, all_sigma_values, all_rho_values, all_discriminator_losses, all_generator_losses, iteration_numbers)
 
-results = train(Generator, Discriminator_paper, criterion, inverse_theta)
+results = train_benjo(Generator, Discriminator, criterion, inverse_theta)
 plot_results(results)
 
 # Close to paper
