@@ -140,11 +140,15 @@ class Generator(torch.nn.Module):
         self.reset_parameters()    
 
     def reset_parameters(self):
-        self.theta.data = torch.zeros_like(self.theta)
-        #self.theta.data[0] = 2.
-        #self.theta.data[1] = 2.
-        self.theta.data[8] = 0.9
-        #self.theta.data = torch.tensor([1.5, 1.7, 0.3, 0.1, 0.8, 0.8, 0.3, 0, 0.9])
+        self.theta.data = torch.tensor([inverse_transform_sigmoid(2, lower=1., upper=3.), # mu_1
+                                        inverse_transform_sigmoid(2, lower=1., upper=3.), # mu_2
+                                        inverse_transform_sigmoid(0, lower=-0.5, upper=1.5), # gamma_1
+                                        inverse_transform_sigmoid(0, lower=-1., upper=1.), # gamma_2
+                                        inverse_transform_sigmoid(1, lower=0., upper=2.), # sigma_1
+                                        inverse_transform_sigmoid(1, lower=0., upper=2.), # sigma_2
+                                        math.atanh(0), # rho_s
+                                        math.atanh(0), # rho_t
+                                        0.9]) # beta
 
     def forward(self, num_samples):
         lambda_val = 1
@@ -264,7 +268,7 @@ class LogisticDiscriminator(nn.Module):
         # Apply linear transformation
         return self.linear(x)
 
-def train(Generator_object, Discriminator_object, criterion, inverse_theta, num_iterations = 1500, num_samples = 300, num_repetitions = 10, d_every = 1, wd = 0.01):
+def train(Generator_object, Discriminator_object, criterion, inverse_theta, num_iterations = 1500, num_samples = 300, num_repetitions = 10, d_every = 1, g_every = 1, wd = 0.01):
     
     all_mu_values = [[] for _ in range(num_repetitions)]
     all_gamma_values = [[] for _ in range(num_repetitions)]
@@ -276,8 +280,8 @@ def train(Generator_object, Discriminator_object, criterion, inverse_theta, num_
 
     for rep in tqdm(range(num_repetitions)):
 
-        generator = Generator_object()
         discriminator = Discriminator_object()
+        generator = Generator_object()
 
         optimizerD = torch.optim.Adam(discriminator.parameters(), lr=1e-2, weight_decay=wd)
         optimizerG = torch.optim.Adam(generator.parameters(), lr=1e-2)
@@ -305,28 +309,30 @@ def train(Generator_object, Discriminator_object, criterion, inverse_theta, num_
                 optimizerD.step()
             
             # Train the generator
-            optimizerG.zero_grad()
-            
-            fake_samples = generator.forward(num_samples)
-            fake_logits = discriminator(fake_samples)
-            
-            generator_loss = criterion(fake_logits, torch.ones_like(fake_logits))
-            
-            generator_loss.backward()
-            optimizerG.step()
+            if i % g_every == 0:
+                optimizerG.zero_grad()
+                
+                fake_samples = generator.forward(num_samples)
+                fake_logits = discriminator(fake_samples)
+                
+                generator_loss = criterion(fake_logits, torch.ones_like(fake_logits))
+                
+                generator_loss.backward()
+                optimizerG.step()
 
             # Current parameter values
 
             new_mu = transform_sigmoid(generator.theta.data[0:2], lower=1., upper=3.).detach().cpu().numpy().copy()
-            new_gamma_1 = transform_sigmoid(generator.theta.data[2], lower=0.5, upper=1.5).detach().cpu().numpy().copy()
+            new_gamma_1 = transform_sigmoid(generator.theta.data[2], lower=-0.5, upper=1.5).detach().cpu().numpy().copy()
             new_gamma_2 = transform_sigmoid(generator.theta.data[3], lower=-1., upper=1.).detach().cpu().numpy().copy()
             new_sigma = transform_sigmoid(generator.theta.data[4:6], lower=0., upper=2.).detach().cpu().numpy().copy()
+            new_rho = torch.tanh(generator.theta.data[6:8]).detach().cpu().numpy().copy()
 
             # Store current parameter values
             all_mu_values[rep].append(new_mu)
             all_gamma_values[rep].append([new_gamma_1, new_gamma_2])
             all_sigma_values[rep].append(new_sigma)
-            all_rho_values[rep].append(torch.tanh(generator.theta.data[6:8]).detach().cpu().numpy())
+            all_rho_values[rep].append(new_rho)
             all_discriminator_losses[rep].append(discriminator_loss.item())
             all_generator_losses[rep].append(generator_loss.item())
 
@@ -444,7 +450,7 @@ criterion = nn.BCEWithLogitsLoss()
 #all_mu_values, all_gamma_values, all_sigma_values, all_rho_values, all_discriminator_losses, all_generator_losses, iteration_numbers = train(Generator, Discriminator, criterion, inverse_theta)
 #plot_results(all_mu_values, all_gamma_values, all_sigma_values, all_rho_values, all_discriminator_losses, all_generator_losses, iteration_numbers)
 
-results = train(Generator, Discriminator_paper, criterion, inverse_theta)
+results = train(Generator, Discriminator, criterion, inverse_theta, num_iterations=500, num_samples=300, num_repetitions=5)
 plot_results(results)
 
 # Close to paper
