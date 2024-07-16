@@ -298,8 +298,13 @@ def train(Generator_object, Discriminator_object, criterion, inverse_theta, num_
                 optimizerD.zero_grad()
                 
                 #generator.theta.data[generator.theta.data > 10.] = 10.
-                fake_samples = generator.forward(num_samples)
-                
+                try:
+                    fake_samples = generator.forward(num_samples)
+                except Exception as e:
+                    print(e)
+                    print(generator.theta.data)
+                    print(generator.theta.grad)
+
                 fake_logits = discriminator(fake_samples)  # Detach fake samples from the generator's graph
                 true_logits = discriminator(true_samples)
                 
@@ -450,7 +455,7 @@ criterion = nn.BCEWithLogitsLoss()
 #all_mu_values, all_gamma_values, all_sigma_values, all_rho_values, all_discriminator_losses, all_generator_losses, iteration_numbers = train(Generator, Discriminator, criterion, inverse_theta)
 #plot_results(all_mu_values, all_gamma_values, all_sigma_values, all_rho_values, all_discriminator_losses, all_generator_losses, iteration_numbers)
 
-results = train(Generator, Discriminator, criterion, inverse_theta, num_iterations=500, num_samples=300, num_repetitions=5)
+results = train(Generator, Discriminator, criterion, inverse_theta)
 plot_results(results)
 
 # Close to paper
