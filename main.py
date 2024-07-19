@@ -13,6 +13,8 @@ import numpy as np
 
 import torch.nn as nn
 
+import geomloss
+
 def logEexpmax(mu1, mu2, sig1, sig2, rho):
     theta = torch.sqrt(torch.tensor((sig1 - sig2)**2 + 2 * (1 - rho) * sig1 * sig2))
     normal_dist = torch.distributions.Normal(0, 1)
@@ -41,6 +43,42 @@ def inverse_transform_sigmoid(y, lower=1, upper=3):
 def inverse_transform_tanh(y, lower=1, upper=3):
     x = (2 * y - (lower + upper)) / (upper - lower)
     return math.atanh(x)
+
+def gradient_penalty_one(discriminator, real_samples, fake_samples, device='cpu', gamma=10):
+    batch_size = real_samples.size()[0]
+    alpha = torch.rand((batch_size, 1)).to(device)
+    alpha = alpha.expand(real_samples.size()).to(device)
+    interpolates = alpha * real_samples + ((1 - alpha) * fake_samples).to(device)
+
+    interpolates = interpolates.to(device)
+    interpolates.requires_grad = True
+
+    disc_interpolates = discriminator(interpolates)
+
+    gradients = torch.autograd.grad(outputs=disc_interpolates, inputs=interpolates,
+                                    grad_outputs=torch.ones(disc_interpolates.size()).to(device),
+                                    create_graph=True, retain_graph=True)[0]
+    
+    gradients = gradients.view(batch_size, -1)
+    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * gamma
+    return gradient_penalty
+
+def gradient_penalty_two(discriminator, real_samples, fake_samples):
+    alpha = torch.rand(real_samples.size(0), 1, 1, 1, device=real_samples.device)
+    interpolates = alpha * real_samples + ((1 - alpha) * fake_samples)
+    interpolates.requires_grad_(True)
+    d_interpolates = discriminator(interpolates)
+    gradients = torch.autograd.grad(
+        outputs=d_interpolates,
+        inputs=interpolates,
+        grad_outputs=torch.ones(d_interpolates.size(), device=real_samples.device),
+        create_graph=True,
+        retain_graph=True,
+        only_inputs=True
+    )[0]
+    gradients = gradients.view(gradients.size(0), -1)
+    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
+    return gradient_penalty
 
 
 class PolakRibiereCG(torch.optim.Optimizer):
@@ -268,7 +306,7 @@ class LogisticDiscriminator(nn.Module):
         # Apply linear transformation
         return self.linear(x)
 
-def train(Generator_object, Discriminator_object, criterion, inverse_theta, num_iterations = 1500, num_samples = 300, num_repetitions = 10, d_every = 1, g_every = 1, wd = 0.01):
+def train(Generator_object, Discriminator_object, criterion, inverse_theta, num_iterations = 1500, num_samples = 300, num_repetitions = 10, d_every = 1, g_every = 1, wd = 0.01, beta1 = 0.9):
     
     all_mu_values = [[] for _ in range(num_repetitions)]
     all_gamma_values = [[] for _ in range(num_repetitions)]
@@ -283,8 +321,8 @@ def train(Generator_object, Discriminator_object, criterion, inverse_theta, num_
         discriminator = Discriminator_object()
         generator = Generator_object()
 
-        optimizerD = torch.optim.Adam(discriminator.parameters(), lr=1e-2, weight_decay=wd)
-        optimizerG = torch.optim.Adam(generator.parameters(), lr=1e-2)
+        optimizerD = torch.optim.Adam(discriminator.parameters(), lr=1e-2, weight_decay=wd, betas=(beta1, 0.999))
+        optimizerG = torch.optim.Adam(generator.parameters(), lr=1e-2, betas=(beta1, 0.999))
 
         true_generator = Generator_object()
         true_generator.theta.data = inverse_theta
@@ -308,10 +346,16 @@ def train(Generator_object, Discriminator_object, criterion, inverse_theta, num_
                 fake_logits = discriminator(fake_samples)  # Detach fake samples from the generator's graph
                 true_logits = discriminator(true_samples)
                 
-                discriminator_loss = criterion(fake_logits, torch.zeros_like(fake_logits)) + criterion(true_logits, torch.ones_like(true_logits))
-                
+                #discriminator_loss = criterion(fake_logits, torch.zeros_like(fake_logits)) + criterion(true_logits, torch.ones_like(true_logits))
+                discriminator_loss = - (true_logits.mean() - fake_logits.mean()) # Wasserstein loss
+                #gradient_penalty = gradient_penalty_one(discriminator, true_samples, fake_samples)
+                #discriminator_loss = WD + wd * gradient_penalty
+
                 discriminator_loss.backward()
                 optimizerD.step()
+
+                for p in discriminator.parameters():
+                    p.data.clamp_(-0.01, 0.01)
             
             # Train the generator
             if i % g_every == 0:
@@ -320,8 +364,9 @@ def train(Generator_object, Discriminator_object, criterion, inverse_theta, num_
                 fake_samples = generator.forward(num_samples)
                 fake_logits = discriminator(fake_samples)
                 
-                generator_loss = criterion(fake_logits, torch.ones_like(fake_logits))
-                
+                #generator_loss = criterion(fake_logits, torch.ones_like(fake_logits))
+                generator_loss = - fake_logits.mean() # Wasserstein loss
+
                 generator_loss.backward()
                 optimizerG.step()
 
@@ -450,12 +495,13 @@ inverse_theta = torch.tensor([inverse_transform_sigmoid(mu_1, lower=1., upper=3.
 
 # GAN
 
-criterion = nn.BCEWithLogitsLoss()
+#criterion = nn.BCEWithLogitsLoss()
+criterion = geomloss.SamplesLoss(loss='sinkhorn', p=1, blur=0.01) # almost Wasserstein loss
 
 #all_mu_values, all_gamma_values, all_sigma_values, all_rho_values, all_discriminator_losses, all_generator_losses, iteration_numbers = train(Generator, Discriminator, criterion, inverse_theta)
 #plot_results(all_mu_values, all_gamma_values, all_sigma_values, all_rho_values, all_discriminator_losses, all_generator_losses, iteration_numbers)
 
-results = train(Generator, Discriminator, criterion, inverse_theta)
+results = train(Generator, Discriminator, criterion, inverse_theta, g_every=15, num_iterations=1000)
 plot_results(results)
 
 # Close to paper
