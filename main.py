@@ -13,6 +13,19 @@ import numpy as np
 
 import torch.nn as nn
 
+def mvn_inverse_cdf(u, mu, sigma):
+    
+    # Compute the Cholesky decomposition of the covariance matrix
+    L = torch.linalg.cholesky(sigma)
+    
+    # Compute the inverse CDF of a standard normal distribution
+    normal = torch.distributions.Normal(0, 1)
+    z = normal.icdf(u)
+    
+    # Transform the standard normal quantiles to multivariate normal quantiles
+    return mu + torch.matmul(z, L.T)
+
+
 def logEexpmax(mu1, mu2, sig1, sig2, rho):
     theta = torch.sqrt(torch.tensor((sig1 - sig2)**2 + 2 * (1 - rho) * sig1 * sig2))
     normal_dist = torch.distributions.Normal(0, 1)
@@ -150,7 +163,7 @@ class Generator(torch.nn.Module):
                                         math.atanh(0), # rho_t
                                         0.9]) # beta
 
-    def forward(self, num_samples):
+    def forward(self, noise, num_samples):
         lambda_val = 1
         logit_mu_1, logit_mu_2, logit_gamma_1, logit_gamma_2, log_sigma_1, log_sigma_2, arctanh_rho_s, arctanh_rho_t, beta = self.theta
 
@@ -173,7 +186,8 @@ class Generator(torch.nn.Module):
                                 [rho_t * sigma_1**2, rho_s * rho_t * sigma_1 * sigma_2, sigma_1**2, rho_s * sigma_1 * sigma_2],
                                 [rho_s * rho_t * sigma_1 * sigma_2, rho_t * sigma_2**2, rho_s * sigma_1 * sigma_2, sigma_2**2]])
 
-        eps = torch.distributions.MultivariateNormal(eps_mu, eps_sigma).rsample((num_samples,))
+        #eps = torch.distributions.MultivariateNormal(eps_mu, eps_sigma).rsample((num_samples,))
+        eps = mvn_inverse_cdf(noise, eps_mu, eps_sigma)
 
         # Log wages at t = 1 for each sector
 
@@ -268,7 +282,7 @@ class LogisticDiscriminator(nn.Module):
         # Apply linear transformation
         return self.linear(x)
 
-def train(Generator_object, Discriminator_object, criterion, inverse_theta, num_iterations = 1500, num_samples = 300, num_repetitions = 10, d_every = 1, g_every = 1, wd = 0.01):
+def train(u, Generator_object, Discriminator_object, criterion, inverse_theta, num_iterations = 1500, num_samples = 300, num_repetitions = 10, d_every = 1, g_every = 1, wd = 0):
     
     all_mu_values = [[] for _ in range(num_repetitions)]
     all_gamma_values = [[] for _ in range(num_repetitions)]
@@ -283,13 +297,14 @@ def train(Generator_object, Discriminator_object, criterion, inverse_theta, num_
         discriminator = Discriminator_object()
         generator = Generator_object()
 
-        optimizerD = torch.optim.Adam(discriminator.parameters(), lr=1e-2, weight_decay=wd)
-        optimizerG = torch.optim.Adam(generator.parameters(), lr=1e-2)
+        optimizerD = torch.optim.Adam(discriminator.parameters(), betas = (0.9, 0.999), lr=1e-3, weight_decay=wd)
+        optimizerG = torch.optim.Adam(generator.parameters(), betas=(0.9, 0.999), lr=1e-3, weight_decay=wd)
 
         true_generator = Generator_object()
         true_generator.theta.data = inverse_theta
 
-        true_samples = true_generator.forward(num_samples).detach()
+        u = torch.rand(n, 4)
+        true_samples = true_generator.forward(u, num_samples).detach()
 
         for i in tqdm(range(num_iterations)):
 
@@ -299,7 +314,7 @@ def train(Generator_object, Discriminator_object, criterion, inverse_theta, num_
                 
                 #generator.theta.data[generator.theta.data > 10.] = 10.
                 try:
-                    fake_samples = generator.forward(num_samples)
+                    fake_samples = generator.forward(u, num_samples)
                 except Exception as e:
                     print(e)
                     print(generator.theta.data)
@@ -317,7 +332,7 @@ def train(Generator_object, Discriminator_object, criterion, inverse_theta, num_
             if i % g_every == 0:
                 optimizerG.zero_grad()
                 
-                fake_samples = generator.forward(num_samples)
+                fake_samples = generator.forward(u, num_samples)
                 fake_logits = discriminator(fake_samples)
                 
                 generator_loss = criterion(fake_logits, torch.ones_like(fake_logits))
@@ -455,7 +470,10 @@ criterion = nn.BCEWithLogitsLoss()
 #all_mu_values, all_gamma_values, all_sigma_values, all_rho_values, all_discriminator_losses, all_generator_losses, iteration_numbers = train(Generator, Discriminator, criterion, inverse_theta)
 #plot_results(all_mu_values, all_gamma_values, all_sigma_values, all_rho_values, all_discriminator_losses, all_generator_losses, iteration_numbers)
 
-results = train(Generator, Discriminator, criterion, inverse_theta)
+n = 300
+u = torch.rand(n, 4)
+
+results = train(u, Generator, Discriminator, criterion, inverse_theta, num_samples = n, num_repetitions=2, num_iterations=5000)
 plot_results(results)
 
 # Close to paper
