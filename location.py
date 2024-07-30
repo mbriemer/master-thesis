@@ -2,21 +2,35 @@ import torch
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
+def mvn_inverse_cdf(u, mu, sigma):
+    
+    # Compute the Cholesky decomposition of the covariance matrix
+    L = torch.linalg.cholesky(sigma)
+    
+    # Compute the inverse CDF of a standard normal distribution
+    normal = torch.distributions.Normal(0, 1)
+    z = normal.icdf(u)
+    
+    # Transform the standard normal quantiles to multivariate normal quantiles
+    return mu + torch.matmul(z, L.T)
+
 class Generator_location(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, d):
         super(Generator_location, self).__init__()
-        self.theta = torch.nn.Parameter(torch.tensor([2., 3.]))
+        #self.theta = torch.nn.Parameter(torch.tensor([2., 3.]))
+        self.theta = torch.nn.ParameterList([2 * torch.nn.Parameter(torch.ones(d)), 3 * torch.nn.Parameter(torch.eye(d))])
 
     def forward(self, u):
         mu, sigma = self.theta
-        return torch.distributions.Normal(mu, sigma).icdf(u)
+        #return torch.distributions.Normal(mu, sigma).icdf(u)
+        return mvn_inverse_cdf(u, mu, sigma)
     
 class Discriminator_location(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, d):
         super(Discriminator_location, self).__init__()
 
         self.stack = torch.nn.Sequential(
-            torch.nn.Linear(1, 100),
+            torch.nn.Linear(d, 100),
             torch.nn.ReLU(),
             torch.nn.Linear(100, 100),
             torch.nn.ReLU(),
@@ -26,27 +40,33 @@ class Discriminator_location(torch.nn.Module):
     def forward(self, x):
         return self.stack(x.unsqueeze(1)).squeeze(1)
     
-def train_location(Discriminator_object, Generator_object, criterion, u, theta, num_repetitions = 10, num_iterations = 5000, num_samples = 1000, n_discriminator = 1, n_generator = 1):
+def train_location(Discriminator_object, Generator_object, criterion, d, true_theta, num_repetitions = 10, num_iterations = 5000, num_samples = 1000, n_discriminator = 1, n_generator = 1):
 
     all_mu_values = [[] for _ in range(num_repetitions)]
     all_sigma_values = [[] for _ in range(num_repetitions)]
     all_discriminator_losses = [[] for _ in range(num_repetitions)]
     all_generator_losses = [[] for _ in range(num_repetitions)]
-    iteration_numbers = []
+    iteration_numbers = range(num_iterations)
 
     for rep in tqdm(range(num_repetitions)):
 
-        discriminator = Discriminator_object()
-        generator = Generator_object()
+        u = torch.distributions.Uniform(torch.zeros(d), torch.ones(d)).sample((num_samples,))
+
+        discriminator = Discriminator_object(d)
+        generator = Generator_object(d)
 
         optimizer_discriminator = torch.optim.Adam(discriminator.parameters())
         optimizer_generator = torch.optim.Adam(generator.parameters())
 
-        true_generator = Generator_object()
-        true_generator.theta.data = torch.tensor(theta)
+        true_generator = Generator_object(d)
+        true_generator.theta[0].data = torch.tensor(true_theta[0])
+        true_generator.theta[1].data = torch.tensor(true_theta[1])
         true_samples = true_generator.forward(u).detach()
 
-        for it in tqdm(range(num_iterations)):
+        for _ in tqdm(range(num_iterations)):
+
+            #u = torch.rand(num_samples)
+
             # Train discriminator
             for _ in range(n_discriminator):
                 optimizer_discriminator.zero_grad()
@@ -67,13 +87,10 @@ def train_location(Discriminator_object, Generator_object, criterion, u, theta, 
                 generator_loss.backward()
                 optimizer_generator.step()  
 
-            all_mu_values[rep].append(generator.theta[0].item())
-            all_sigma_values[rep].append(generator.theta[1].item())
+            all_mu_values[rep].append(generator.theta[0][0].item())
+            all_sigma_values[rep].append(generator.theta[1][0,0].item())
             all_discriminator_losses[rep].append(discriminator_loss.item())
             all_generator_losses[rep].append(generator_loss.item())
-
-            if rep == 0:
-                iteration_numbers.append(it)
 
     return all_mu_values, all_sigma_values, all_discriminator_losses, all_generator_losses, iteration_numbers
 
@@ -131,8 +148,12 @@ plt.hist(x, density=True)
 plt.show()
 '''
 
-num_samples = 1000
-u = torch.rand(num_samples)
+num_samples = 300
+d = 3
+#u = torch.distributions.Uniform(torch.zeros(d), torch.ones(d)).sample((num_samples,))
+true_mu = torch.zeros(d)
+true_sigma = torch.eye(d)
+true_theta = [true_mu, true_sigma]
 
-results = train_location(Discriminator_location, Generator_location, torch.nn.BCEWithLogitsLoss(), u, (0., 1.), num_repetitions=5, num_samples=num_samples)
+results = train_location(Discriminator_location, Generator_location, torch.nn.BCEWithLogitsLoss(), d, true_theta, num_repetitions=5, num_iterations = 3000, num_samples=num_samples)
 plot_results(results)
