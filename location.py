@@ -1,12 +1,18 @@
 import torch
 import matplotlib.pyplot as plt
+#import geomloss
 from tqdm import tqdm
+#import pykeops
 
-def mvn_inverse_cdf(u, mu, sigma):
+def mvn_inverse_cdf(u, mu, Sigma):
     
     # Compute the Cholesky decomposition of the covariance matrix
-    L = torch.linalg.cholesky(sigma)
-    
+    try:
+        L = torch.linalg.cholesky(Sigma)        
+    except Exception as err:
+        print(err)
+        print(Sigma)
+
     # Compute the inverse CDF of a standard normal distribution
     normal = torch.distributions.Normal(0, 1)
     z = normal.icdf(u)
@@ -18,12 +24,14 @@ class Generator_location(torch.nn.Module):
     def __init__(self, d):
         super(Generator_location, self).__init__()
         #self.theta = torch.nn.Parameter(torch.tensor([2., 3.]))
-        self.theta = torch.nn.ParameterList([2 * torch.nn.Parameter(torch.ones(d)), 3 * torch.nn.Parameter(torch.eye(d))])
+        self.theta = torch.nn.ParameterList([2 * torch.nn.Parameter(torch.ones(d)), torch.nn.Parameter(torch.ones(d))])
 
     def forward(self, u):
         mu, sigma = self.theta
+        sigma.detach()
+        Sigma = torch.diag(sigma)
         #return torch.distributions.Normal(mu, sigma).icdf(u)
-        return mvn_inverse_cdf(u, mu, sigma)
+        return mvn_inverse_cdf(u, mu, Sigma)
     
 class Discriminator_location(torch.nn.Module):
     def __init__(self, d):
@@ -46,8 +54,7 @@ def train_location(Discriminator_object, Generator_object, criterion, d, true_th
     all_sigma_values = [[] for _ in range(num_repetitions)]
     all_discriminator_losses = [[] for _ in range(num_repetitions)]
     all_generator_losses = [[] for _ in range(num_repetitions)]
-    iteration_numbers = range(num_iterations)
-
+    
     for rep in tqdm(range(num_repetitions)):
 
         u = torch.distributions.Uniform(torch.zeros(d), torch.ones(d)).sample((num_samples,))
@@ -63,14 +70,19 @@ def train_location(Discriminator_object, Generator_object, criterion, d, true_th
         true_generator.theta[1].data = torch.tensor(true_theta[1])
         true_samples = true_generator.forward(u).detach()
 
-        for _ in tqdm(range(num_iterations)):
+        for it in tqdm(range(num_iterations)):
 
             #u = torch.rand(num_samples)
 
             # Train discriminator
             for _ in range(n_discriminator):
                 optimizer_discriminator.zero_grad()
-                fake_samples = generator.forward(u)
+                try:
+                    fake_samples = generator.forward(u)
+                except Exception as err:
+                    print(err)
+                    iteration_numbers = range(it)
+                    return all_mu_values, all_sigma_values, all_discriminator_losses, all_generator_losses, iteration_numbers
 
                 true_logits = discriminator(true_samples)
                 fake_logits = discriminator(fake_samples)
@@ -82,16 +94,23 @@ def train_location(Discriminator_object, Generator_object, criterion, d, true_th
             # Train generator
             for _ in range(n_generator):
                 optimizer_generator.zero_grad()
-                fake_samples = generator.forward(u)
+                try:
+                    fake_samples = generator.forward(u)
+                except Exception as err:
+                    print(err)
+                    iteration_numbers = range(it)
+                    return all_mu_values, all_sigma_values, all_discriminator_losses, all_generator_losses, iteration_numbers
+                
                 generator_loss = criterion(discriminator(fake_samples), torch.ones_like(discriminator(fake_samples)))
                 generator_loss.backward()
                 optimizer_generator.step()  
 
             all_mu_values[rep].append(generator.theta[0][0].item())
-            all_sigma_values[rep].append(generator.theta[1][0,0].item())
+            all_sigma_values[rep].append(generator.theta[1][0].item())
             all_discriminator_losses[rep].append(discriminator_loss.item())
             all_generator_losses[rep].append(generator_loss.item())
 
+    iteration_numbers = range(num_iterations)
     return all_mu_values, all_sigma_values, all_discriminator_losses, all_generator_losses, iteration_numbers
 
 def plot_results(results):
@@ -148,12 +167,13 @@ plt.hist(x, density=True)
 plt.show()
 '''
 
-num_samples = 300
-d = 3
+num_samples = 3000
+d = 20
 #u = torch.distributions.Uniform(torch.zeros(d), torch.ones(d)).sample((num_samples,))
-true_mu = torch.zeros(d)
-true_sigma = torch.eye(d)
+true_mu = torch.zeros(d) + 5
+true_sigma = torch.ones(d)
 true_theta = [true_mu, true_sigma]
+loss = torch.nn.BCEWithLogitsLoss() # geomloss.SamplesLoss() #
 
-results = train_location(Discriminator_location, Generator_location, torch.nn.BCEWithLogitsLoss(), d, true_theta, num_repetitions=5, num_iterations = 3000, num_samples=num_samples)
+results = train_location(Discriminator_location, Generator_location, loss, d, true_theta, num_repetitions=1, num_iterations = 5000, num_samples=num_samples)
 plot_results(results)
