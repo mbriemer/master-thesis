@@ -1,0 +1,93 @@
+% !TeX program = pdflatex
+% !TeX TS-program = pdflatex
+% !TeX TXS-program:compile = txs:///pdflatex/
+
+% !BIB program = biber
+% !BIB TS-program = biber
+% !TeX TXS-program:bibliography = txs:///biber
+
+
+
+
+%%%%%%%%%%%%%%%%
+%%  PREAMBLE  %%
+%%%%%%%%%%%%%%%%
+
+\newcommand{\thesistitle}{%
+	Estimation with GANs
+}
+\newcommand{\thesisauthor} {Marvin Benedikt Riemer}
+\newcommand{\studentID}    {2799234}
+\newcommand{\thesistype}   {MA}  % BA for bachelor's, MA for master's thesis
+\newcommand{\advisorname}  {Prof.~Dr. Joachim Freyberger}
+\newcommand{\advisorgender}{m}  % f for female, m for male
+
+\documentclass[12pt, a4paper, oneside, full]{article}
+\usepackage[left=3cm, top=2cm, right=2cm, bottom=2cm]{geometry}
+	% ``Die Seitenränder sollen links 3 cm sowie rechts, oben und unten 2 cm betragen.''
+\newcommand{\linesperpagedesired}{35}
+	% In Microsoft Word, A4 paper with margins of 2 cm at the top and bottom and the font set to
+	% 12-pt Times New Roman, a line spacing of 1.5 yields 35 lines of text per page.
+
+\input{0_0_Preamble/Preamble_Fundamental_packages}
+\input{0_0_Preamble/Preamble_Page_layout_general}
+\input{0_0_Preamble/Preamble_Page_layout_thesis_BA_MA}
+\input{0_0_Preamble/Preamble_BibLaTeX_AER}  %\input{0_0_Preamble/Preamble_BibLaTeX_APA}
+\input{0_0_Preamble/Preamble_Fonts_Times}
+\input{0_0_Preamble/Preamble_Miscellaneous}
+
+% Set up desired deviations from the default bibliography settings here:
+\setcounter{biburllcpenalty}{9999}
+\setcounter{biburlucpenalty}{9999}
+\setcounter{biburlnumpenalty}{9999}
+\AtEveryBibitem{\iffieldundef{eprint}{}{\clearfield{url}}}
+\AtEveryBibitem{\iffieldundef{doi}{}{\clearfield{eprint}}}
+
+\bibliography{Library.bib}
+
+\hypersetup{
+	pdftitle  = {\thesistitle},
+	pdfauthor = {\thesisauthor}
+}
+
+%%%%%%%%%%%%
+%%  BODY  %%
+%%%%%%%%%%%%
+
+
+\begin{document}
+
+\title{\thesistitle}
+\author{\thesisauthor}
+\date{\today}
+
+\include{0_1_Frontmatter_Thesis_Term_Paper/Thesis_frontmatter_EN}
+
+% \subimport enables execution of \input commands in subdocuments without having to adjust paths
+% Do not use \subimport{...} (i.e., the asterisk version), since this will lead to
+% font issues.
+\subimport{1_Content}{1_Introduction}
+
+\clearpage
+
+\begin{appendices}
+	\label{sec:appendix}
+	\FloatBarrier
+	\subimport{1_Content/}{9_Appendix.tex}
+	\FloatBarrier
+	\clearpage
+\end{appendices}
+
+\clearpage % Print References on a new page
+
+\phantomsection % Needed for the bibliography bookmark to point to the correct page
+
+\begin{refcontext}[sorting=nyt]  % Sort BIBLIOGRAPHY by alphabet (while CITATIONS are sorted by year)
+\sloppy
+\printbibliography[heading=bibintoc]
+\end{refcontext}
+
+\include{9_Formal_Stuff/Declaration}
+
+
+\end{document}
