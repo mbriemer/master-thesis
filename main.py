@@ -13,6 +13,8 @@ import numpy as np
 
 import torch.nn as nn
 
+from scipy.optimize import minimize
+
 def mvn_inverse_cdf(u, mu, sigma):
     
     # Compute the Cholesky decomposition of the covariance matrix
@@ -361,6 +363,79 @@ def train(u, Generator_object, Discriminator_object, criterion, inverse_theta, n
                 
     return [all_mu_values, all_gamma_values, all_sigma_values, all_rho_values, all_discriminator_losses, all_generator_losses, iteration_numbers]
 
+def train_no_grad(u, Generator_object, Discriminator_object, criterion, inverse_theta, num_iterations=1500, num_samples=300, num_repetitions=10, d_every=1, n_discriminator=1, n_generator=1):
+    
+    all_mu_values = [[] for _ in range(num_repetitions)]
+    all_gamma_values = [[] for _ in range(num_repetitions)]
+    all_sigma_values = [[] for _ in range(num_repetitions)]
+    all_rho_values = [[] for _ in range(num_repetitions)]
+    all_discriminator_losses = [[] for _ in range(num_repetitions)]
+    all_generator_losses = [[] for _ in range(num_repetitions)]
+    iteration_numbers = []
+
+    for rep in tqdm(range(num_repetitions)):
+
+        discriminator = Discriminator_object()
+        generator = Generator_object()
+
+        optimizerD = torch.optim.Adam(discriminator.parameters(), betas=(0.9, 0.999), lr=1e-3)
+
+        true_generator = Generator_object()
+        true_generator.theta.data = inverse_theta
+
+        u = torch.rand(num_samples, 4)
+        true_samples = true_generator.forward(u, num_samples).detach()
+
+        def generator_loss(params):
+            generator.theta.data = torch.tensor(params)
+            fake_samples = generator.forward(u, num_samples)
+            fake_logits = discriminator(fake_samples)
+            loss = criterion(fake_logits, torch.ones_like(fake_logits))
+            return loss.item()
+
+        initial_params = generator.theta.data.numpy()
+
+        for i in tqdm(range(num_iterations)):
+
+            # Train the discriminator
+            if i % d_every == 0:
+                for _ in range(n_discriminator):
+                    optimizerD.zero_grad()
+                    
+                    fake_samples = generator.forward(u, num_samples)
+                    fake_logits = discriminator(fake_samples.detach())
+                    true_logits = discriminator(true_samples)
+                    
+                    discriminator_loss = criterion(fake_logits, torch.zeros_like(fake_logits)) + criterion(true_logits, torch.ones_like(true_logits))
+                    
+                    discriminator_loss.backward()
+                    optimizerD.step()
+            
+            # Train the generator using Nelder-Mead
+            result = minimize(generator_loss, initial_params, method='Nelder-Mead', options={'maxiter': n_generator})
+            initial_params = result.x
+            generator.theta.data = torch.tensor(result.x)
+
+            # Current parameter values
+            new_mu = transform_sigmoid(generator.theta.data[0:2], lower=1., upper=3.).detach().cpu().numpy().copy()
+            new_gamma_1 = transform_sigmoid(generator.theta.data[2], lower=-0.5, upper=1.5).detach().cpu().numpy().copy()
+            new_gamma_2 = transform_sigmoid(generator.theta.data[3], lower=-1., upper=1.).detach().cpu().numpy().copy()
+            new_sigma = transform_sigmoid(generator.theta.data[4:6], lower=0., upper=2.).detach().cpu().numpy().copy()
+            new_rho = torch.tanh(generator.theta.data[6:8]).detach().cpu().numpy().copy()
+
+            # Store current parameter values
+            all_mu_values[rep].append(new_mu)
+            all_gamma_values[rep].append([new_gamma_1, new_gamma_2])
+            all_sigma_values[rep].append(new_sigma)
+            all_rho_values[rep].append(new_rho)
+            all_discriminator_losses[rep].append(discriminator_loss.item())
+            all_generator_losses[rep].append(result.fun)
+
+            if rep == 0:  # Only need to store iteration numbers once
+                iteration_numbers.append(i)
+                
+    return [all_mu_values, all_gamma_values, all_sigma_values, all_rho_values, all_discriminator_losses, all_generator_losses, iteration_numbers]
+
 def plot_results(results):
     
     all_mu_values, all_gamma_values, all_sigma_values, all_rho_values, all_discriminator_losses, all_generator_losses, iteration_numbers = results
@@ -473,7 +548,7 @@ criterion = nn.BCEWithLogitsLoss()
 n = 300
 u = torch.rand(n, 4)
 
-results = train(u, Generator, Discriminator, criterion, inverse_theta, num_samples = n, num_repetitions=2, num_iterations=5000)
+results = train_no_grad(u, Generator, Discriminator, criterion, inverse_theta, num_samples = n, num_repetitions=1, num_iterations=5000)
 plot_results(results)
 
 # Close to paper
