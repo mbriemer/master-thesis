@@ -35,6 +35,7 @@
 \input{0_0_Preamble/Preamble_BibLaTeX_AER}  %\input{0_0_Preamble/Preamble_BibLaTeX_APA}
 \input{0_0_Preamble/Preamble_Fonts_Times}
 \input{0_0_Preamble/Preamble_Miscellaneous}
+\input{0_0_Preamble/Preamble_Custom}
 
 % Set up desired deviations from the default bibliography settings here:
 \setcounter{biburllcpenalty}{9999}
@@ -66,14 +67,17 @@
 % \subimport enables execution of \input commands in subdocuments without having to adjust paths
 % Do not use \subimport{...} (i.e., the asterisk version), since this will lead to
 % font issues.
-\subimport{1_Content}{1_Introduction}
+\subimport{1_Content}{Introduction}
+\subimport{1_Content}{Method}
+\subimport{1_Content}{Simulation}
+\subimport{1_Content}{Conclusion}
 
 \clearpage
 
 \begin{appendices}
 	\label{sec:appendix}
 	\FloatBarrier
-	\subimport{1_Content/}{9_Appendix.tex}
+	\subimport{1_Content/}{Appendix.tex}
 	\FloatBarrier
 	\clearpage
 \end{appendices}
