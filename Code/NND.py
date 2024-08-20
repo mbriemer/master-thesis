@@ -1,7 +1,6 @@
 # Code for the neural network discriminator
 
 import torch
-import roy_helper_functions as rhf
 
 class Discriminator_paper(torch.nn.Module): #flat net like in the paper
 

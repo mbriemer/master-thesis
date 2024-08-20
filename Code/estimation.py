@@ -1,39 +1,36 @@
 # Training loops and functions for estimation
 
-import torch
-from scipy.optimize import minimize
-from tqdm import tqdm
+import numpy as np
+import estimagic as em
 
 import roy_helper_functions as rhf
-import NND as nnd
+import NND_sp as nnd
 
-def train_kpm(generator_function, DiscriminatorClass, criterion, theta, num_samples=300, num_repetitions=10, n_discriminator=1, g=10):
+def train_kpm(generator_function, true_theta, num_hidden=10, g=10, num_samples=300, num_repetitions=10):
     """Training loop that is close to the original code"""
 
     results = [[] for _ in range(num_repetitions)]
+    theta_initial_guess = np.ones_like(true_theta) * 0.5
+    theta_initial_guess[6] = 0
+    theta_initial_guess[8] = 0.9
 
-    theta_initial_guess = torch.ones_like(theta, requires_grad=True) * 0.5
-    bounds = [(1, 3),
-             (1, 3),
-             (-0.5, 1.5),
-             (-1, 1), 
-             (0, 2),
-             (0, 2),
-             (0, 0), # rho_t is fixed in simple case
-             (-1, 1),
-             (0.9, 0.9)] # beta is fixed
+    lower_bounds = np.array([1, 1, -.5, -1, 0, 0, 0, -1, 0.9])
+    upper_bounds = np.array([3, 3, 1.5, 1, 2, 2, 0, 1, 0.9])
     
-    optimizerD = torch.optim.Adam(DiscriminatorClass().parameters())
-
-    for rep in tqdm(range(num_repetitions)):
-        u = torch.rand(num_samples, 4)
-        true_values = rhf.royinv(u, theta, 0, num_samples)
+    for rep in range(num_repetitions):
+        u = np.random.rand(num_samples, 4)
+        true_values = generator_function(u, true_theta, 0, num_samples)
 
         def loss_function(theta):
-            fake_values = generator_function(u, theta, num_samples)
-            return nnd.NDD_loss(true_values, fake_values, DiscriminatorClass, optimizerD, criterion, n_discriminator, g)
+            fake_values = generator_function(u, theta, 0, num_samples)
+            return nnd.NDD_loss(true_values, fake_values, num_hidden=num_hidden, num_models=g)
         
-        result = minimize(loss_function, theta_initial_guess, method='Nelder-Mead', bounds=bounds, options={'return_all': True})
+        result = em.minimize(criterion=loss_function,
+                             params=theta_initial_guess,
+                             algorithm="scipy_neldermead",
+                             lower_bounds=lower_bounds,
+                             upper_bounds=upper_bounds  
+                             )
         results[rep] = result
 
     return results
