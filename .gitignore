@@ -1,6 +1,3 @@
-# Created by https://www.toptal.com/developers/gitignore/api/python,latex
-# Edit at https://www.toptal.com/developers/gitignore?templates=python,latex
-
 ### LaTeX ###
 ## Core latex/pdflatex auxiliary files:
 *.aux
@@ -482,4 +479,8 @@ poetry.toml
 # LSP config files
 pyrightconfig.json
 
-# End of https://www.toptal.com/developers/gitignore/api/python,latex
+### Cluster ###
+### Files that do not, or only selectively, need to be backuped, relating to the HPC cluster
+
+.out
+.txt
