@@ -5,8 +5,9 @@ import numpy as np
 import scipy.optimize as opt
 #from tqdm import tqdm
 
-from .roy_helper_functions import royinv
-from .NND_sp import generator_loss
+from roy_helper_functions import royinv
+from NND_sp import generator_loss
+from other_discriminators import OracleD as oracle
 
 def callback(xk):
     print(f"Current solution: {xk}")
@@ -15,6 +16,7 @@ def train_kpm(generator_function, true_theta, num_hidden=10, g=10, num_samples=3
     """Training loop that is close to the original code"""
 
     results = [[] for _ in range(num_repetitions)]
+    results_oracle = [[] for _ in range(num_repetitions)]
     theta_initial_guess = [2, 2, 0, 0, 1, 1, 0, 0, 0.9]
 
     lower_bounds = np.array([1, 1, -.5, -1, 0, 0, -1, 0, 0.9])
@@ -26,6 +28,10 @@ def train_kpm(generator_function, true_theta, num_hidden=10, g=10, num_samples=3
         print(f"Starting repetition {rep}")
         u = np.random.rand(num_samples, 4)
         true_values = generator_function(u, true_theta, 0, num_samples)
+
+        def oracle_loss_function(theta):
+            fake_values = royinv(u, theta, 0, num_samples)
+            return oracle(true_values, fake_values, true_theta, theta)
 
         def loss_function(theta):
             print(f"Current theta: {theta}")
@@ -40,14 +46,23 @@ def train_kpm(generator_function, true_theta, num_hidden=10, g=10, num_samples=3
                              logging="my_magic_log.db" 
                              )
         '''
+        result_oracle = opt.minimize(fun = oracle_loss_function,
+                                     x0 = theta_initial_guess, 
+                                     method='Powell', 
+                                     bounds=sp_bounds,
+                                     callback=callback,
+                                     options={'return_all' : True, 'disp' : True, 'maxiter' : 10})
         
+        print(f"Oracle result: {result_oracle.x}")
+
         result = opt.minimize(fun = loss_function, 
-                              x0 = theta_initial_guess, 
+                              x0 = result_oracle.x, 
                               method='Powell', 
                               bounds=sp_bounds,
                               callback=callback,
                               options={'return_all' : True, 'disp' : True, 'maxiter' : 10})
 
         results[rep] = result
+        results_oracle[rep] = result_oracle
 
-    return results
+    return results, results_oracle

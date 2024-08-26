@@ -3,6 +3,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import norm
+from scipy.special import logsumexp
 
 def logEexpmax(mu1, mu2, sig1, sig2, rho):
     """logEexpmax.m"""
@@ -32,6 +33,119 @@ def smooth(x, lambda_val): # TODO Check
         std_diffs = np.std(diffs)
         smoothed = 1 + np.special.ndtr(diffs / (lambda_val * std_diffs))
         return smoothed.squeeze()
+    
+def logexpnmaxpdf(z, a, b, mu1, mu2, sig1, sig2, rho):
+    """From logroypdf.m"""
+    p = np.full_like(z, -np.inf)
+    i = z > np.maximum(a, b)
+    logzb = np.log(z[i] - b)
+    logza = np.log(z[i] - a)
+    r = np.sqrt(1 - rho**2)
+    
+    p1 = (-logzb + norm.logpdf(logzb, mu2, sig2) + 
+          norm.logcdf(logza, mu1 + rho * sig1 / sig2 * (logzb - mu2), r * sig1))
+    p2 = (-logza + norm.logpdf(logza, mu1, sig1) + 
+          norm.logcdf(logzb, mu2 + rho * sig2 / sig1 * (logza - mu1), r * sig2))
+    
+    p[i] = logsumexp([p1, p2], axis=0)
+    return p
+
+def lognmaxpdf(x, mu1, mu2, sig1, sig2, rho):
+    "From logroypdf.m"
+    if rho == 1:
+        if norm.cdf(x, mu1, sig1) < norm.cdf(x, mu2, sig2):
+            return norm.logpdf(x, mu1, sig1)
+        else:
+            return norm.logpdf(x, mu2, sig2)
+    elif rho == -1:
+        if norm.cdf(x, mu1, sig1) >= norm.sf(x, mu2, sig2):
+            return logsumexp([norm.logpdf(x, mu1, sig1), norm.logpdf(x, mu2, sig2)])
+        else:
+            return -np.inf
+    else:
+        r = np.sqrt(1 - rho**2)
+        x1 = (x - mu1) / (sig1 * r)
+        x2 = (x - mu2) / (sig2 * r)
+        p1 = norm.logpdf(x, mu1, sig1) + norm.logcdf(x2 - rho * x1)
+        p2 = norm.logpdf(x, mu2, sig2) + norm.logcdf(x1 - rho * x2)
+        return logsumexp([p1, p2])
+    
+
+import numpy as np
+from scipy.stats import norm
+from scipy.special import logsumexp
+
+def logroypdf(y, theta):
+    """
+    Calculate log probability density for the Roy model.
+    
+    Parameters:
+    y: array-like, shape (n_samples, 4)
+        Data array where each row represents (log_wage1, sector1, log_wage2, sector2)
+    theta: array-like, shape (9,)
+        Parameter vector (mu1, mu2, gamma1, gamma2, sigma1, sigma2, rho_s, rho_t, beta)
+    
+    Returns:
+    p: array-like, shape (n_samples,)
+        Log probability density for each sample
+    """
+    mu1, mu2, gamma1, gamma2, sigma1, sigma2, rho_s, rho_t, beta = theta
+    
+    # Transpose y if it's not in the expected shape
+    if y.shape[1] != 4:
+        y = y.T
+    
+    log_wage1, sector1, log_wage2, sector2 = y.T
+    
+    # Helper function for log of expected max
+    def log_expected_max(mu_a, mu_b, sigma_a, sigma_b, rho):
+        theta = np.sqrt((sigma_a - sigma_b)**2 + 2 * (1 - rho) * sigma_a * sigma_b)
+        z = (mu_a - mu_b + sigma_a**2 - rho * sigma_a * sigma_b) / theta
+        return mu_a + sigma_a**2/2 + np.log(norm.cdf(z)) + \
+               mu_b + sigma_b**2/2 + np.log(norm.cdf(-z))
+    
+    # Calculate log of expected future wages
+    log_expected_future = np.log(beta) + np.where(
+        sector1 == 0,
+        log_expected_max(mu1 + gamma1, mu2, sigma1, sigma2, rho_s),
+        log_expected_max(mu1, mu2 + gamma2, sigma1, sigma2, rho_s)
+    )
+    
+    # Calculate log of value function
+    log_value = logsumexp([log_wage1, log_expected_future], axis=0)
+    
+    # Calculate log probability of sector choice in period 1
+    log_prob_sector1 = np.where(
+        sector1 == 0,
+        norm.logcdf((log_wage1 - mu2) / sigma2),
+        norm.logcdf((log_wage1 - mu1) / sigma1)
+    )
+    
+    # Calculate log probability of wage in period 1
+    log_prob_wage1 = np.where(
+        sector1 == 0,
+        norm.logpdf(log_wage1, mu1, sigma1),
+        norm.logpdf(log_wage1, mu2, sigma2)
+    )
+    
+    # Calculate log probability of wage in period 2
+    mu2_cond = np.where(
+        sector1 == 0,
+        mu1 + gamma1 + rho_t * sigma1 / sigma2 * (log_wage1 - mu1),
+        mu2 + gamma2 + rho_t * sigma2 / sigma1 * (log_wage1 - mu2)
+    )
+    sigma2_cond = np.sqrt(1 - rho_t**2) * np.where(sector1 == 0, sigma1, sigma2)
+    log_prob_wage2 = norm.logpdf(log_wage2, mu2_cond, sigma2_cond)
+    
+    # Calculate log probability of sector choice in period 2
+    log_prob_sector2 = np.where(
+        sector2 == 0,
+        norm.logcdf((log_wage2 - mu2_cond) / sigma2_cond),
+        norm.logcdf(-(log_wage2 - mu2_cond) / sigma2_cond)
+    )
+    
+    # Combine all log probabilities
+    return log_prob_sector1 + log_prob_wage1 + log_prob_wage2 + log_prob_sector2
 
 def royinv(noise, theta, lambda_val, num_samples):
     """royinv.m"""
