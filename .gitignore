@@ -482,6 +482,6 @@ pyrightconfig.json
 ### Cluster ###
 ### Files that do not, or only selectively, need to be backuped, relating to the HPC cluster
 
-.out
-.txt
-.png
+*.out
+*.txt
+*.png
