@@ -1,43 +1,81 @@
 import numpy as np
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
+import multiprocessing as mp
 
 def loss(x):
     return (x[0] - 1)**2 + (x[1] - 2)**2
 
-result = minimize(loss, [0, 0], method='Nelder-Mead', options={'return_all': True})
+def single_repetition(args):
+    rep, seed = args
+    rng = np.random.default_rng(seed)
+    
+    print(f"Starting run {rep}")
+    initial_value = rng.uniform(0,3,2)
+    result = minimize(loss, initial_value, method='Nelder-Mead', options={'return_all': True})
+    return rep, initial_value, result.x
 
-# Create plot
-fig, ax = plt.subplots()
+def parallelized(num_runs):
+    num_processes = mp.cpu_count()
+    print(f"Number of cores: {num_processes}")
 
-# Extract all points from the optimization path
-all_points = np.array(result.allvecs)
+    # Create a SeedSequence
+    ss = np.random.SeedSequence()
+    # Generate child seeds for each run
+    child_seeds = ss.spawn(num_runs)
+    
+    with mp.Pool(processes=num_processes) as pool:
+        results = pool.map(single_repetition, enumerate(child_seeds))
+    
+    # Sort results by run number to ensure order
+    results.sort(key=lambda x: x[0])
+    
+    # Print results in order
+    for rep, initial_value, optimum in results:
+        print(f"Run {rep} complete. Started at {initial_value}, found optimum: {optimum}.")
+    
+    return results
 
-# Plot the optimization path
-ax.plot(all_points[:, 0], all_points[:, 1], 'b.-', alpha=0.5)
+if __name__ == "__main__":
+    num_runs = 100
+    results = parallelized(num_runs=num_runs)
+    print(f"Total runs completed: {len(results)}")
 
-# Mark start and end points
-ax.plot(all_points[0, 0], all_points[0, 1], 'go', label='Start')
-ax.plot(all_points[-1, 0], all_points[-1, 1], 'ro', label='End')
+    """
+    for r in range(len(results)):
+        rep = results[r]
+        # Create plot
+        fig, ax = plt.subplots()
 
-# Set labels and title
-ax.set_xlabel('x')
-ax.set_ylabel('y')
-ax.set_title('Optimization Path')
-ax.legend()
+        # Extract all points from the optimization path
+        all_points = np.array(rep.allvecs)
 
-# Add contour plot of the loss function
-x = np.linspace(-1, 3, 100)
-y = np.linspace(0, 4, 100)
-X, Y = np.meshgrid(x, y)
-Z = loss([X, Y])
-ax.contour(X, Y, Z, levels=20, cmap='viridis', alpha=0.5)
+        # Plot the optimization path
+        ax.plot(all_points[:, 0], all_points[:, 1], 'b.-', alpha=0.5)
 
-# Save the plot
-plt.savefig('optimization_plot.png')
+        # Mark start and end points
+        ax.plot(all_points[0, 0], all_points[0, 1], 'go', label='Start')
+        ax.plot(all_points[-1, 0], all_points[-1, 1], 'ro', label='End')
 
-# Store output
-with open('output.txt', 'w') as f:
-    f.write(str(result))
+        # Set labels and title
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        ax.set_title('Optimization Path')
+        ax.legend()
 
-print("Optimization complete. Results saved in 'output.txt' and plot saved as 'optimization_plot.png'.")
+        # Add contour plot of the loss function
+        x = np.linspace(-1, 3, 100)
+        y = np.linspace(0, 4, 100)
+        X, Y = np.meshgrid(x, y)
+        Z = loss([X, Y])
+        ax.contour(X, Y, Z, levels=20, cmap='viridis', alpha=0.5)
+
+        # Save the plot
+        plt.savefig(f'optimization_plot_{r}.png')
+
+        # Store output
+        with open(f'output_{r}.txt', 'w') as f:
+            f.write(str(rep))
+
+    print("Optimization complete. Results saved in 'output.txt' and plot saved as 'optimization_plot.png'.")
+    """
