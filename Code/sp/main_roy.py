@@ -20,19 +20,31 @@ if __name__ == "__main__":
     num_repetitions = 10
     n_discriminator = 100
 
-    results = train_kpm_parallel(royinv, true_theta, num_hidden=10, g=5, num_samples=num_samples, num_repetitions=num_repetitions)
+    results = train_kpm_parallel(royinv, true_theta, num_hidden=10, g=10, num_samples=num_samples, num_repetitions=num_repetitions)
     #print("Oracle")
     #print(results_oracle)
     #plot_theta_values(results_oracle, true_theta, lower_bounds, upper_bounds)
     #plot_loss_function(results_oracle)
 
+    # Save results
+    for rep, initial_value, result in results:
+        np.savez(f'estimation_result_{rep}.npz', 
+                 initial_value=initial_value, 
+                 final_value=result.x, 
+                 all_values=result.allvecs,
+                 fun_values=result.allvecs)
+
+    print(f"Estimation complete. Results saved in 'estimation_result_[0-{num_repetitions-1}].npz' files.")
+
+    '''
     print("NND")
-    print(results)
+    #print(results)
     plot_theta_values(results, true_theta, lower_bounds, upper_bounds)
     plot_loss_function(results)
 
-
-
+    with open("results.txt", "w") as f:
+        f.write(str(results))
+    '''
     '''
     plt_loss = em.criterion_plot(results)
     plt_loss.show

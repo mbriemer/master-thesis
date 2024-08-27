@@ -1,63 +1,60 @@
 # Training loops and functions for estimation
 
 import numpy as np
-#import estimagic as em
 import scipy.optimize as opt
-#from tqdm import tqdm
 import multiprocessing as mp
 
 from roy_helper_functions import royinv
 from NND_sp import generator_loss
-from other_discriminators import OracleD as oracle
-
-def callback(xk):
-    print(f"Current solution: {xk}")
-
-def callback(xk):
-    print(f"Current solution: {xk}")
 
 def loss_function(theta, u, true_values, num_hidden, g):
-    print(f"Current theta: {theta}")
     fake_values = royinv(u, theta, 0, len(u))
     return -generator_loss(true_values, fake_values, num_hidden=num_hidden, num_models=g)
 
 def run_single_repetition(args):
-    rep, generator_function, true_theta, num_hidden, g, num_samples, theta_initial_guess, sp_bounds = args
-    
+    rep, seed, generator_function, true_theta, num_hidden, g, num_samples = args
     print(f"Starting repetition {rep}")
-    u = np.random.rand(num_samples, 4)
+    
+    rng = np.random.default_rng(seed)
+    u = rng.random((num_samples, 4))
     true_values = generator_function(u, true_theta, 0, num_samples)
     
+    theta_initial_guess = rng.uniform(low=[1, 1, -0.5, -1, 0, 0, -1, 0, 0.9],
+                                      high=[3, 3, 1.5, 1, 2, 2, 1, 0, 0.9])
+    
+    lower_bounds = [1, 1, -0.5, -1, 0, 0, -1, 0, 0.9]
+    upper_bounds = [3, 3, 1.5, 1, 2, 2, 1, 0, 0.9]
+    sp_bounds = list(zip(lower_bounds, upper_bounds))
+
     result = opt.minimize(
         fun=lambda theta: loss_function(theta, u, true_values, num_hidden, g),
         x0=theta_initial_guess,
         method='Powell',
         bounds=sp_bounds,
-        callback=callback,
-        options={'return_all': True, 'disp': True, 'maxiter': 10}
+        options={'return_all': True}
     )
     
-    return result
+    return rep, theta_initial_guess, result
 
 def train_kpm_parallel(generator_function, true_theta, num_hidden=10, g=10, num_samples=300, num_repetitions=10):
-    theta_initial_guess = [2, 2, 0, 0, 1, 1, 0, 0, 0.9]
-    lower_bounds = np.array([1, 1, -.5, -1, 0, 0, -1, 0, 0.9])
-    upper_bounds = np.array([3, 3, 1.5, 1, 2, 2, 1, 0, 0.9])
-    sp_bounds = list(zip(lower_bounds.tolist(), upper_bounds.tolist()))
-    print(sp_bounds)
-
-    # Prepare arguments for each repetition
-    args_list = [(rep, generator_function, true_theta, num_hidden, g, num_samples, theta_initial_guess, sp_bounds) 
-                 for rep in range(num_repetitions)]
-
-    # Use all available CPU cores
     num_processes = mp.cpu_count()
-    print(f"Number of cores: {num_processes}")
+
+    # Create a SeedSequence
+    ss = np.random.SeedSequence()
+    # Generate child seeds for each run
+    child_seeds = ss.spawn(num_repetitions)
+    
+    # Prepare arguments for each repetition
+    args_list = [(rep, seed, generator_function, true_theta, num_hidden, g, num_samples) 
+                 for rep, seed in enumerate(child_seeds)]
 
     # Run parallel computations
     with mp.Pool(processes=num_processes) as pool:
         results = pool.map(run_single_repetition, args_list)
 
+    # Sort results by run number to ensure order
+    results.sort(key=lambda x: x[0])
+    
     return results
 
 def train_kpm(generator_function, true_theta, num_hidden=10, g=10, num_samples=300, num_repetitions=10):
@@ -70,7 +67,6 @@ def train_kpm(generator_function, true_theta, num_hidden=10, g=10, num_samples=3
     lower_bounds = np.array([1, 1, -.5, -1, 0, 0, -1, 0, 0.9])
     upper_bounds = np.array([3, 3, 1.5, 1, 2, 2, 1, 0, 0.9])
     sp_bounds = list(zip(lower_bounds.tolist(), upper_bounds.tolist()))
-    print(sp_bounds)
     
     for rep in range(num_repetitions):
         print(f"Starting repetition {rep}")

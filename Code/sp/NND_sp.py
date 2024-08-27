@@ -60,6 +60,6 @@ def generator_loss(true_samples, fake_samples, num_hidden=10, num_models=1):
     #print(f"Average model predictions: {avg_model.predict_proba(fake_samples)}")
     generator_loss = np.mean(np.log(avg_model.predict_proba(fake_samples)))
     discriminator_loss = np.mean(np.log(avg_model.predict_proba(true_samples))) + np.mean(np.log(1 - avg_model.predict_proba(fake_samples)))
-    print(f"Discriminator loss: {discriminator_loss}")
-    print(f"Generator loss: {generator_loss}")
+    #print(f"Discriminator loss: {discriminator_loss}")
+    #print(f"Generator loss: {generator_loss}")
     return generator_loss
