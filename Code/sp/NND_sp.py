@@ -1,5 +1,9 @@
 from sklearn.neural_network import MLPClassifier
 import numpy as np
+#import logging
+
+#logging.basicConfig(level=logging.INFO)
+#logger = logging.getLogger(__name__)
 
 def average_discriminators(models):
     # Initialize arrays to accumulate the weights and biases
@@ -47,11 +51,27 @@ def average_discriminators(models):
     return new_model
 
 def NND_train(true_samples, fake_samples, num_hidden=10):
+    #print("Training NND")
     input_data = np.concatenate((true_samples, fake_samples))
+    nplusm = len(input_data)
     labels = np.concatenate((np.ones(len(true_samples)), np.zeros(len(fake_samples))))
-    model = MLPClassifier(hidden_layer_sizes=(num_hidden,), max_iter=1000)
+    model = MLPClassifier(hidden_layer_sizes=(num_hidden,),
+                          activation='logistic',
+                          solver='adam',
+                          batch_size=nplusm,
+                          max_iter=2000)#, learning_rate_init=0.001, early_stopping=True, validation_fraction=0.1)
     model.fit(input_data, labels)
-    #print("NN trained!")
+    #print("NND trained")
+    '''
+    # Check convergence based on loss improvement
+    if hasattr(model, 'loss_curve_'):
+        converged = len(model.loss_curve_) < model.max_iter
+    else:
+        converged = model.n_iter_ < model.max_iter
+    
+    logger.info(f"Model converged: {converged}")
+    logger.info(f"Number of iterations: {model.n_iter_}")
+    '''
     return model
 
 def generator_loss(true_samples, fake_samples, num_hidden=10, num_models=1):
@@ -59,7 +79,7 @@ def generator_loss(true_samples, fake_samples, num_hidden=10, num_models=1):
     avg_model = average_discriminators(models)
     #print(f"Average model predictions: {avg_model.predict_proba(fake_samples)}")
     generator_loss = np.mean(np.log(avg_model.predict_proba(fake_samples)))
-    discriminator_loss = np.mean(np.log(avg_model.predict_proba(true_samples))) + np.mean(np.log(1 - avg_model.predict_proba(fake_samples)))
+    #discriminator_loss = np.mean(np.log(avg_model.predict_proba(true_samples))) + np.mean(np.log(1 - avg_model.predict_proba(fake_samples)))
     #print(f"Discriminator loss: {discriminator_loss}")
     #print(f"Generator loss: {generator_loss}")
     return generator_loss

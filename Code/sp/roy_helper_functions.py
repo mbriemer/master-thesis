@@ -150,19 +150,28 @@ def logroypdf(y, theta):
 def royinv(noise, theta, lambda_val, num_samples):
     """royinv.m"""
     
-    mu_1, mu_2, gamma_1, gamma_2, sigma_1, sigma_2, rho_s, rho_t, beta = theta
+    #try:
+    mu_1, mu_2, gamma_1, gamma_2, sigma_1, sigma_2, rho_s = theta
+    rho_t = 0
+    beta = 0.9
 
     eps_mu = np.zeros(4)
     eps_sigma = np.array([[sigma_1**2, rho_s * sigma_1 * sigma_2, rho_t * sigma_1**2, rho_s * rho_t * sigma_1 * sigma_2],
-                                [rho_s * sigma_1 * sigma_2, sigma_2**2, rho_s * rho_t * sigma_1 * sigma_2, rho_t * sigma_2**2],
-                                [rho_t * sigma_1**2, rho_s * rho_t * sigma_1 * sigma_2, sigma_1**2, rho_s * sigma_1 * sigma_2],
-                                [rho_s * rho_t * sigma_1 * sigma_2, rho_t * sigma_2**2, rho_s * sigma_1 * sigma_2, sigma_2**2]])
+                            [rho_s * sigma_1 * sigma_2, sigma_2**2, rho_s * rho_t * sigma_1 * sigma_2, rho_t * sigma_2**2],
+                            [rho_t * sigma_1**2, rho_s * rho_t * sigma_1 * sigma_2, sigma_1**2, rho_s * sigma_1 * sigma_2],
+                            [rho_s * rho_t * sigma_1 * sigma_2, rho_t * sigma_2**2, rho_s * sigma_1 * sigma_2, sigma_2**2]])
+
+    # Check if the covariance matrix is positive definite
+    #if not np.all(np.linalg.eigvals(eps_sigma) > 0):
+    #    print(f"Covariance matrix is not positive definite for theta: {theta}")
+    #    return None
+
     eps = mvn_inverse_cdf(noise, eps_mu, eps_sigma)
     
     # Log wages at t = 1 for each sector
 
     logw1m = np.column_stack((mu_1 + eps[:, 0],
-                                 mu_2 + eps[:, 1]))
+                                mu_2 + eps[:, 1]))
 
     # Value function at t = 1 for each sector
 
@@ -194,7 +203,10 @@ def royinv(noise, theta, lambda_val, num_samples):
     #d1_smooth = smooth(x = logv1m, lambda_val = lambda_val)
     #d2_smooth = smooth(x = logw2m, lambda_val = lambda_val)
 
-    return np.stack([logw1, d1, logw2, d2], axis = -1)
+    return np.stack([logw1, d1, logw2, d2], axis=-1)
+    #except Exception as e:
+    #    print(f"Error in royinv for theta {theta}: {str(e)}")
+    #    return None
 
 def plot_results(results):
     all_mu_values, all_sigma_values, all_discriminator_losses, all_generator_losses, iteration_numbers = results
