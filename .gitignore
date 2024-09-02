@@ -485,3 +485,4 @@ pyrightconfig.json
 *.out
 *.txt
 *.png
+*npz
