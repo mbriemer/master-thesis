@@ -16,7 +16,7 @@ if __name__ == "__main__":
     upper_bounds = np.array([3, 3, 1.5, 1, 2, 2, 1])#, 0, 0.9])
 
     num_samples = 300
-    num_repetitions = 4
+    num_repetitions = 64
     #n_discriminator = 100
 
     results = train_kpm_parallel(royinv, true_theta, num_hidden=10, g=10, num_samples=num_samples, num_repetitions=num_repetitions)

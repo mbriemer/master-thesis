@@ -80,7 +80,6 @@ def train_kpm_parallel(generator_function, true_theta, num_hidden=10, g=30, num_
         for result in pool.imap_unordered(run_single_repetition, args_list):
             results.append(result)
             rep, initial_value, final_result, error = result
-            print(result)
             if error is None:
                 np.savez(f'simres/intermediate_result_{rep}.npz', 
                          initial_value=initial_value, 
