@@ -2,7 +2,7 @@ import numpy as np
 from scipy.stats import logistic
 from sklearn.linear_model import LogisticRegression
 
-from roy_helper_functions import logroypdf
+from translation import logroypdf
 
 def logistic_loss(X1, X2):
     """Function "loss" from main_roy.m"""

@@ -89,7 +89,9 @@ def logroypdf(y, theta):
     p: array-like, shape (n_samples,)
         Log probability density for each sample
     """
-    mu1, mu2, gamma1, gamma2, sigma1, sigma2, rho_s, rho_t, beta = theta
+    mu1, mu2, gamma1, gamma2, sigma1, sigma2, rho_s = theta
+    rho_t = 0
+    beta = 0.9
     
     # Transpose y if it's not in the expected shape
     if y.shape[1] != 4:
@@ -161,10 +163,10 @@ def royinv(noise, theta, lambda_val, num_samples):
                             [rho_t * sigma_1**2, rho_s * rho_t * sigma_1 * sigma_2, sigma_1**2, rho_s * sigma_1 * sigma_2],
                             [rho_s * rho_t * sigma_1 * sigma_2, rho_t * sigma_2**2, rho_s * sigma_1 * sigma_2, sigma_2**2]])
 
-    # Check if the covariance matrix is positive definite
-    #if not np.all(np.linalg.eigvals(eps_sigma) > 0):
-    #    print(f"Covariance matrix is not positive definite for theta: {theta}")
-    #    return None
+    #Check if the covariance matrix is positive definite
+    if not np.all(np.linalg.eigvals(eps_sigma) > 0):
+        print(f"Covariance matrix is not positive definite for theta: {theta}")
+        return None
 
     eps = mvn_inverse_cdf(noise, eps_mu, eps_sigma)
     
