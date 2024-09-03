@@ -5,7 +5,10 @@ import numpy as np
 #logging.basicConfig(level=logging.INFO)
 #logger = logging.getLogger(__name__)
 
-def average_discriminators(models):
+def average_discriminators(models, fake_samples):
+
+
+    '''
     # Initialize arrays to accumulate the weights and biases
     avg_coefs = [np.zeros_like(coef) for coef in models[0].coefs_]
     avg_intercepts = [np.zeros_like(intercept) for intercept in models[0].intercepts_]
@@ -49,6 +52,7 @@ def average_discriminators(models):
     new_model._fitted = True
     
     return new_model
+    '''
 
 def NND_train(true_samples, fake_samples, num_hidden=10):
     #print("Training NND")
@@ -76,9 +80,11 @@ def NND_train(true_samples, fake_samples, num_hidden=10):
 
 def generator_loss(true_samples, fake_samples, num_hidden=10, num_models=1):
     models = [NND_train(true_samples, fake_samples, num_hidden) for _ in range(num_models)]
-    avg_model = average_discriminators(models)
+    #avg_model = average_discriminators(models, fake_samples)
     #print(f"Average model predictions: {avg_model.predict_proba(fake_samples)}")
-    generator_loss = np.mean(np.log(avg_model.predict_proba(fake_samples)))
+    average_prediction_fake = np.mean([model.predict_proba(fake_samples) for model in models], axis=0)
+    average_prediction_true = np.mean([model.predict_proba(true_samples) for model in models], axis=0)
+    generator_loss = np.mean(np.log(average_prediction_true)) + np.mean(np.log(1 - average_prediction_fake))
     #discriminator_loss = np.mean(np.log(avg_model.predict_proba(true_samples))) + np.mean(np.log(1 - avg_model.predict_proba(fake_samples)))
     #print(f"Discriminator loss: {discriminator_loss}")
     #print(f"Generator loss: {generator_loss}")
