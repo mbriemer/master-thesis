@@ -38,14 +38,15 @@ def run_single_repetition(args):
         if true_values is None:
             raise ValueError("generator_function returned None")
         
-        #theta_initial_guess = rng.uniform(low=[1, 1, -0.5, -1, 0, 0, -1],
-        #                                  high=[3, 3, 1.5, 1, 2, 2, 1])
+        theta_initial_guess = rng.uniform(low=[1, 1, -0.5, -1, 0, 0, -0.99],
+                                          high=[3, 3, 1.5, 1, 2, 2, 0.99])
+        #print(f"Initial guess for repetition {rep}: {theta_initial_guess}")
         
         true_theta =         [1.8, 2,  0.5, 0,  1, 1, 0.5]#, 0, 0.9]
-        theta_initial_guess = [1.9, 2.1, 0.4, -0.1, 0.9, 1.1, 0.6]#, 0, 0.9]
+        #theta_initial_guess = [1.9, 2.1, 0.4, -0.1, 0.9, 1.1, 0.6]#, 0, 0.9]
 
-        lower_bounds = [1, 1, -0.5, -1, 0, 0, -1]#, 0, 0.9]
-        upper_bounds = [3, 3, 1.5, 1, 2, 2, 1, 0]#, 0.9]
+        lower_bounds = [1, 1, -0.5, -1, 0, 0, -0.99]#, 0, 0.9]
+        upper_bounds = [3, 3, 1.5, 1, 2, 2, 1, 0.99]#, 0.9]
         sp_bounds = list(zip(lower_bounds, upper_bounds))
 
         result = opt.minimize(
@@ -54,7 +55,7 @@ def run_single_repetition(args):
             method='Nelder-Mead',
             bounds=sp_bounds,
             callback=callback,
-            options={'disp': True, 'maxiter': 60, 'return_all': True, 'adaptive': True}
+            options={'disp': True, 'maxiter': 400, 'return_all': True, 'adaptive': True}
         )
         
         if not result.success:
@@ -65,7 +66,7 @@ def run_single_repetition(args):
         print(f"Error in repetition {rep}: {str(e)}")
         return rep, None, None, str(e)
     
-def train_kpm_parallel(generator_function, true_theta, num_hidden=10, g=10, num_samples=300, num_repetitions=10):
+def train_kpm_parallel(generator_function, true_theta, num_hidden=10, g=30, num_samples=300, num_repetitions=10):
     num_processes = mp.cpu_count()
 
     ss = np.random.SeedSequence()
@@ -79,6 +80,7 @@ def train_kpm_parallel(generator_function, true_theta, num_hidden=10, g=10, num_
         for result in pool.imap_unordered(run_single_repetition, args_list):
             results.append(result)
             rep, initial_value, final_result, error = result
+            print(result)
             if error is None:
                 np.savez(f'simres/intermediate_result_{rep}.npz', 
                          initial_value=initial_value, 

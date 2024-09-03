@@ -1,10 +1,10 @@
 #!/bin/sh
 
 #SBATCH --partition=intelsr_medium
-#SBATCH --time=7:00:00
+#SBATCH --time=05:30:00
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
-#SBATCH --output="simres/job_%j.out"
+#SBATCH --cpus-per-task=32
+#SBATCH --output="simres/%j.out"
 
 source ~/.bashrc
 conda deactivate
