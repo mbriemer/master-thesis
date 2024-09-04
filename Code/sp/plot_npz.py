@@ -4,6 +4,7 @@ import os
 import sys
 import argparse
 import glob
+from datetime import datetime
 
 def load_data(directory):
     data = []
@@ -61,13 +62,17 @@ def plot_line_charts(data, param_names, true_theta, lower_bounds, upper_bounds, 
     plt.close()
 
 def main(date_str):
-    output_dir = f'../simres/simres_{date_str}'
+    if date_str == 'local':
+        data_dir = './simres'
+        data = load_data(data_dir)
+        current_datetime = datetime.now().strftime("%Y%m%d%H%M%S")
+        output_dir = f'../simres/simres_local_{current_datetime}'
+    else:
+        output_dir = f'~/simres/simres_{date_str}'
+        data = load_data(output_dir)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    
-    data = load_data(output_dir)
-    #print(data)
-    
+        
     param_names = [
         r'$\mu_1$',
         r'$\mu_2$',
