@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 
 from tqdm import tqdm
 
-from roy_helper_functions import royinv#, logroypdf
-from translation import logroypdf
+from roy_helper_functions import royinv, logroypdf_b
+#from translation import logroypdf
 from NND_sp import generator_loss as NND
 from other_discriminators import OracleD
 
@@ -49,8 +49,8 @@ LL_grid = np.zeros_like(param_grid)
 # Assume these variables are defined elsewhere
 theta = [1.8, 2, 0.5, 0, 1, 1, 0.5]
 #theta2: np.ndarray
-n = 300
-m = 300
+n = 3000
+m = 3000
 lambda_ = 0
 g = 30
 
@@ -74,9 +74,10 @@ for i in tqdm(range(len(theta))):
         th = theta.copy()
         th[i] = param_grid[i, k]
         #cD_grid[i, k] = loss(X, royinv(Z, th, smooth=lambda_))
-        NND_grid[i, k] = NND(X, royinv(Z, th, lambda_, n), num_hidden=10, num_models=g)
-        OracleD_grid[i, k] = OracleD(X, royinv(Z, th, lambda_, n), theta, th)
-        #LL_grid[i, k] = -np.mean(logroypdf(X, th)) / 2
+        #NND_grid[i, k] = NND(X, royinv(Z, th, lambda_, n), num_hidden=10, num_models=g)
+        OracleD_grid[i, k] = OracleD(X, royinv(Z, th, lambda_, m), theta, th)
+        #print(logroypdf_b(X, th))
+        LL_grid[i, k] = -np.mean(logroypdf_b(X, th)) / 2
 
 
 # Plotting
@@ -87,16 +88,21 @@ for i in range(len(theta)):
     ax = axs[i]
     
     # Plot all curves on the same y-axis
-    ax.plot(param_grid[i, :], NND_grid[i, :], linewidth=1.5, color='blue', label='$\\mathbf{M}_\\theta(\\hat{D}_\\theta)$')
-    ax.plot(param_grid[i, :], OracleD_grid[i, :], linewidth=1.5, color='green', label='$\\mathbf{M}_\\theta(D_\\theta)$')
-    #ax.plot(param_grid[i, :], LL_grid[i, :] / 2, linewidth=1.5, color='red', label='$\\mathbf{L}_\\theta$')
+    #ax.plot(param_grid[i, :], NND_grid[i, :], linewidth=1.5, color='blue', label='$\\mathbf{M}_\\theta(\\hat{D}_\\theta)$')
+    #ax.plot(param_grid[i, :], OracleD_grid[i, :], linewidth=1.5, color='green', label='$\\mathbf{M}_\\theta(D_\\theta)$')
+    #ax.plot(param_grid[i, :], (LL_grid[i, :] / 2)-2.3, linewidth=1.5, color='red', label='$\\mathbf{L}_\\theta$')
     
+    #Plot points
+    #ax.scatter(param_grid[i, :], NND_grid[i, :], s=20, color='blue', label='$\\mathbf{M}_\\theta(\\hat{D}_\\theta)$')
+    ax.scatter(param_grid[i, :], OracleD_grid[i, :], s=5, color='green', label='$\\mathbf{M}_\\theta(D_\\theta)$')
+    ax.scatter(param_grid[i, :], (LL_grid[i, :] / 2)-2.3, s=5, color='red', label='$\\mathbf{L}_\\theta$')
+
     # Add vertical line for true parameter value
     ax.axvline(x=theta[i], color='r', linestyle='--', label=f'True {param_names[i]}')
     
     # Set x-axis limits
     ax.set_xlim(param_grid[i, 0], param_grid[i, -1])
-    ax.set_ylim(-1.4, -1.25)
+    #ax.set_ylim(-1.4, -1.25)
     
     # Add legend
     ax.legend(loc='best', frameon=False)
