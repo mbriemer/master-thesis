@@ -56,6 +56,8 @@ def average_discriminators(models, fake_samples):
 
 def NND_train(true_samples, fake_samples, num_hidden=10):
     #print("Training NND")
+    #Set random seed of NN training
+    np.random.seed(456)
     input_data = np.concatenate((true_samples, fake_samples))
     nplusm = len(input_data)
     labels = np.concatenate((np.ones(len(true_samples)), np.zeros(len(fake_samples))))

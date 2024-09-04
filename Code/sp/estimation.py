@@ -10,6 +10,10 @@ from NND_sp import generator_loss
 def callback(xk):
     print(f"Current theta: {xk}")
 
+def quadratic_loss(true_theta, theta):
+    noise = 0.01 * np.random.randn(7)
+    return np.sum(((true_theta - theta) + noise)**2)
+
 def loss_function(theta, u, true_values, num_hidden, g):
     #try:
     fake_values = royinv(u, theta, 0, len(u))
@@ -38,19 +42,20 @@ def run_single_repetition(args):
         if true_values is None:
             raise ValueError("generator_function returned None")
         
-        theta_initial_guess = rng.uniform(low=[1, 1, -0.5, -1, 0, 0, -0.99],
-                                          high=[3, 3, 1.5, 1, 2, 2, 0.99])
+        #theta_initial_guess = rng.uniform(low=[1, 1, -0.5, -1, 0, 0, -0.99],
+        #                                  high=[3, 3, 1.5, 1, 2, 2, 0.99])
         #print(f"Initial guess for repetition {rep}: {theta_initial_guess}")
         
         true_theta =         [1.8, 2,  0.5, 0,  1, 1, 0.5]#, 0, 0.9]
-        #theta_initial_guess = [1.9, 2.1, 0.4, -0.1, 0.9, 1.1, 0.6]#, 0, 0.9]
+        #theta_initial_guess = [1, 2.5,  0.5, 1, 0.5,1.5, 0.7]#, 0, 0.9]
+        theta_initial_guess = [2, 1.5, 1, 1, 0.5, 0.5, -0.5]
 
         lower_bounds = [1, 1, -0.5, -1, 0, 0, -0.99]#, 0, 0.9]
         upper_bounds = [3, 3, 1.5, 1, 2, 2, 1, 0.99]#, 0.9]
         sp_bounds = list(zip(lower_bounds, upper_bounds))
 
         result = opt.minimize(
-            fun=lambda theta: loss_function(theta, u, true_values, num_hidden, g),
+            fun=lambda theta: loss_function(theta, u, true_values, num_hidden, g), #quadratic_loss(true_theta, theta),#
             x0=theta_initial_guess,
             method='Nelder-Mead',
             bounds=sp_bounds,
