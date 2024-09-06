@@ -3,7 +3,7 @@ from scipy.stats import logistic
 from sklearn.linear_model import LogisticRegression
 
 #from translation import logroypdf
-from roy_helper_functions import logroypdf_b
+from roy import logroypdf
 
 def logistic_loss(X1, X2):
     """Function "loss" from main_roy.m"""
@@ -31,10 +31,10 @@ def logistic_loss(X1, X2):
 
 def OracleD(x, y, th_x, th_y):
     """OracleD.m"""
-    logpxx = logroypdf_b(x, th_x)
-    logpxy = logroypdf_b(x, th_y)
-    logpyx = logroypdf_b(y, th_x)
-    logpyy = logroypdf_b(y, th_y)
+    logpxx = logroypdf(x, th_x)
+    logpxy = logroypdf(x, th_y)
+    logpyx = logroypdf(y, th_x)
+    logpyy = logroypdf(y, th_y)
     
     v = np.mean(logpxx - np.logaddexp(logpxx, logpxy)) + \
         np.mean(logpyy - np.logaddexp(logpyx, logpyy))
