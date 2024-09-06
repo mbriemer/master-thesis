@@ -1,7 +1,16 @@
 \section{Method}
 \label{sec:method}
 
+Consider the problem of estimating the parameters of a structural economic model.
+%TODO Is this a good framing?
+For $k \in \{1,\dots,K\}$, let
 
+\begin{equation}
+    Y_k = f_{\Theta}(X_k, Z_k; ),
+\end{equation}
+
+where $Y_k$ is a vector of outcome variables influenced by a vector of noise variables $Z_k$ via a set of (possibly endogeneous) variables $X_k$.
+The strength and functional form of the relationships between the variables is defined by a function $f$ and its parameters $\Theta$.
 
 \begin{algorithm}
     \caption{Adversarial estimation}
@@ -15,4 +24,4 @@
     \end{algorithmic}
 \end{algorithm}
 
-The GAN was first proposed by \textcite{goodfellow2014generative} (later published as \textcite{goodfellow2020generative})..
+The GAN was first proposed by \textcite{goodfellow2014generative} (later published as \textcite{goodfellow2020generative}).
