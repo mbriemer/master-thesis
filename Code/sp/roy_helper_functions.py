@@ -89,7 +89,9 @@ def logroypdf(y, theta):
     p: array-like, shape (n_samples,)
         Log probability density for each sample
     """
-    mu1, mu2, gamma1, gamma2, sigma1, sigma2, rho_s, rho_t, beta = theta
+    mu1, mu2, gamma1, gamma2, sigma1, sigma2, rho_s = theta
+    rho_t = 0
+    beta = 0.9
     
     # Transpose y if it's not in the expected shape
     if y.shape[1] != 4:
@@ -147,6 +149,97 @@ def logroypdf(y, theta):
     # Combine all log probabilities
     return log_prob_sector1 + log_prob_wage1 + log_prob_wage2 + log_prob_sector2
 
+def logroypdf_b(y, theta):
+    """
+    Calculate log probability density for the Roy model.
+    
+    Parameters:
+    y: array-like, shape (n_samples, 4)
+        Data array where each row represents (log_wage1, sector1, log_wage2, sector2)
+    theta: array-like, shape (9,)
+        Parameter vector (mu1, mu2, gamma1, gamma2, sigma1, sigma2, rho_s, rho_t, beta)
+    
+    Returns:
+    p: array-like, shape (n_samples,)
+        Log probability density for each sample
+    """
+    mu1, mu2, gamma1, gamma2, sigma1, sigma2, rho_s = theta
+    
+    #assert rho_t == 0., "required for pdf calculation"
+    #if rho_s != 0.:
+    #    raise NotImplementedError #todo
+    #rho_s = 0
+    rho_t = 0
+    beta = 0.9
+    
+    # Transpose y if it's not in the expected shape
+    #if y.shape[1] != 4:
+    #    y = y.T
+    
+    log_wage1, sector1, log_wage2, sector2 = y.T
+    
+    # Helper function for log of expected max
+    #def log_expected_max(mu_a, mu_b, sigma_a, sigma_b, rho):
+    #    theta = np.sqrt((sigma_a - sigma_b)**2 + 2 * (1 - rho) * sigma_a * sigma_b)
+    #    z = (mu_a - mu_b + sigma_a**2 - rho * sigma_a * sigma_b) / theta
+    #    return mu_a + sigma_a**2/2 + np.log(norm.cdf(z)) + \
+    #           mu_b + sigma_b**2/2 + np.log(norm.cdf(-z))
+    #log_expected_max = logEexpmax
+    #assert np.sum((sector1 == 0 + sector1 == 1)) == sector1.shape[0], sector1.shape[0]
+    
+    # ...
+    
+    # Calculate log probability of sector choice in period 1
+    future_value_gain = beta*np.where(
+        sector1 == 0,
+        np.exp(logEexpmax(mu1 + gamma1, mu2, sigma1, sigma2, rho_s)) - np.exp(logEexpmax(mu1, mu2 + gamma2, sigma1, sigma2, rho_s)),
+        np.exp(logEexpmax(mu1, mu2 + gamma2, sigma1, sigma2, rho_s)) - np.exp(logEexpmax(mu1 + gamma1, mu2, sigma1, sigma2, rho_s))
+    )
+    latent_wage_threshold1 = np.log(np.exp(log_wage1) + future_value_gain)
+    log_prob_sector1 = np.where(
+        sector1 == 0,
+        norm.logcdf((latent_wage_threshold1 - (
+            mu2 + rho_s * sigma2 / sigma1 * (log_wage1 - mu1)
+            )) / sigma2*np.sqrt(1 - rho_s**2)),
+        norm.logcdf((latent_wage_threshold1 - (
+            mu1 + rho_s * sigma1 / sigma2 * (log_wage1 - mu2)
+            )) / sigma1*np.sqrt(1 - rho_s**2))
+    )
+    
+    # Calculate log probability of sector choice in period 2
+    latent_wage_threshold2 = log_wage2
+    log_prob_sector2 = np.where(
+        sector2 == 0,
+        norm.logcdf((latent_wage_threshold2 - (
+            mu2 + rho_s * sigma2 / sigma1 * (log_wage2 - mu1)
+            ) - gamma2*(sector1 == 1)) / sigma2*np.sqrt(1 - rho_s**2)),
+        norm.logcdf((latent_wage_threshold2 - (
+            mu1 + rho_s * sigma1 / sigma2 * (log_wage2 - mu2)
+        ) - gamma2*(sector1 == 0)) / sigma1*np.sqrt(1 - rho_s**2))
+    )
+    
+    # Calculate log probability of wage in period 1
+    log_prob_wage1 = np.where(
+        sector1 == 0,
+        norm.logpdf(log_wage1, mu1, sigma1),
+        norm.logpdf(log_wage1, mu2, sigma2)
+    )
+    
+    # Calculate log probability of wage in period 2
+    log_prob_wage2 = np.where(
+        sector2 == 0,
+        norm.logpdf(log_wage2, mu1 + gamma1*(sector1 == 0), sigma1),
+        norm.logpdf(log_wage2, mu2 + gamma2*(sector1 == 1), sigma2)
+    )
+    
+    #Check if any treshold is NAN
+    if np.any(np.isnan(latent_wage_threshold1)) or np.any(np.isnan(latent_wage_threshold2)):
+        print(f"NAN for theta {theta}")
+        return np.full_like(log_prob_sector1, np.nan)
+    
+    # Combine all log probabilities
+    return log_prob_sector1 + log_prob_wage1 + log_prob_wage2 + log_prob_sector2
+
 def royinv(noise, theta, lambda_val, num_samples):
     """royinv.m"""
     
@@ -161,10 +254,10 @@ def royinv(noise, theta, lambda_val, num_samples):
                             [rho_t * sigma_1**2, rho_s * rho_t * sigma_1 * sigma_2, sigma_1**2, rho_s * sigma_1 * sigma_2],
                             [rho_s * rho_t * sigma_1 * sigma_2, rho_t * sigma_2**2, rho_s * sigma_1 * sigma_2, sigma_2**2]])
 
-    # Check if the covariance matrix is positive definite
-    #if not np.all(np.linalg.eigvals(eps_sigma) > 0):
-    #    print(f"Covariance matrix is not positive definite for theta: {theta}")
-    #    return None
+    #Check if the covariance matrix is positive definite
+    if not np.all(np.linalg.eigvals(eps_sigma) > 0):
+        print(f"Covariance matrix is not positive definite for theta: {theta}")
+        return None
 
     eps = mvn_inverse_cdf(noise, eps_mu, eps_sigma)
     
