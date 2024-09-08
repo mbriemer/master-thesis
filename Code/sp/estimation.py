@@ -4,36 +4,33 @@ import numpy as np
 import scipy.optimize as opt
 import multiprocessing as mp
 
-from roy import royinv
+from roy import royinv, logroypdf
 from NND_sp import generator_loss
-from other_discriminators import OracleD
+from other_discriminators import OracleD, logistic_loss
 
 def callback(xk):
-    print(f"Current theta: {xk}")
+    pass
+    #print(f"Current theta: {xk}")
 
 def quadratic_loss(true_theta, theta):
     noise = 0.01 * np.random.randn(7)
     return np.sum(((true_theta - theta) + noise)**2)
 
-def oracle_loss(true_values, u, true_theta, theta):
+def loss_function(theta, u, true_values, loss, loss_options):
     fake_values = royinv(u, theta)
-    return OracleD(true_values, fake_values, true_theta, theta)
 
-def loss_function(theta, u, true_values, num_hidden, g):
-    #try:
-    fake_values = royinv(u, theta)
-    #    if fake_values is None:
-    #        print(f"royinv returned None for theta: {theta}")
-    #         return np.inf
-    loss = generator_loss(true_values, fake_values, num_hidden=num_hidden, num_models=g)
-    #    if loss is None:
-    #        print(f"generator_loss returned None for theta: {theta}")
-    #        return np.inf
-    #print(f"Loss for theta {theta}: {loss}")
-    return -loss
-    #except Exception as e:
-    #    print(f"Error in loss_function for theta {theta}: {str(e)}")
-    #    return np.inf
+    if loss == 'MLE':
+        return - np.sum(logroypdf(true_values, theta))
+    
+    elif loss == 'oracle':
+        return OracleD(true_values, fake_values, loss_options['true_theta'], theta)
+
+    elif loss == 'logistic':
+        loss, _ = logistic_loss(true_values, fake_values)
+        return loss
+    
+    elif loss == 'NN':
+        return generator_loss(true_values, fake_values, num_hidden=loss_options['num_hidden'], num_models=loss_options['num_models'])
     
 def run_single_repetition(args):
     rep, seed, generator_function, true_theta, num_hidden, g, num_samples = args
@@ -59,19 +56,67 @@ def run_single_repetition(args):
         upper_bounds = [3, 3, 1.5, 1, 2, 2, 1, 0.99]#, 0.9]
         sp_bounds = list(zip(lower_bounds, upper_bounds))
 
-        result = opt.minimize(
-            fun=lambda theta: oracle_loss(true_values, u, true_theta, theta), #loss_function(theta, u, true_values, num_hidden, g), #quadratic_loss(true_theta, theta),#
+        # MLE
+        
+        result_MLE = opt.minimize(
+            fun=lambda theta: loss_function(theta, u, true_values, 'MLE', None),
             x0=theta_initial_guess,
             method='Nelder-Mead',
             bounds=sp_bounds,
             callback=callback,
-            options={'disp': True, 'return_all': True, 'adaptive': True, 'maxiter': 600}
+            options={'disp': True, 'return_all': True, 'adaptive': True}#, 'maxiter': 600}
+        )
+
+        if not result_MLE.success:
+            print(f"Optimization failed for repetition {rep} with MLE: {result_MLE.message}")
+
+        # Adversarial estimator with the oracle discriminator
+        print(f"Starting oracle in repetition {rep}")
+        result_oracle = opt.minimize(
+            fun=lambda theta: loss_function(theta, u, true_values, 'oracle', {'true_theta': true_theta}),
+            x0=result_MLE.x,
+            method='Nelder-Mead',
+            bounds=sp_bounds,
+            callback=callback,
+            options={'disp': True, 'return_all': True, 'adaptive': True}#, 'maxiter': }
+        )
+
+        if not result_oracle.success:
+            print(f"Optimization failed for repetition {rep} with oracle discriminator: {result_oracle.message}")
+
+        # Adversarial estimator with a logistic discriminator
+        
+        print(f"Starting logistic in repetition {rep}")
+        result_logistic = opt.minimize(
+            fun=lambda theta: loss_function(theta, u, true_values, 'logistic', None),
+            x0=result_oracle.x,
+            method='Nelder-Mead',
+            bounds=sp_bounds,
+            callback=callback,
+            options={'disp': True, 'return_all': True, 'adaptive': True}#, 'maxiter': maxiter}
         )
         
-        if not result.success:
-            print(f"Optimization failed for repetition {rep}: {result.message}")
+
+        if not result_logistic.success:
+            print(f"Optimization failed for repetition {rep} with logistic discriminator: {result_logistic.message}")
         
-        return rep, theta_initial_guess, result, None
+        
+        # Adversarial estimator with a neural network discriminator
+        print(f"Starting NN in repetition {rep}")
+        result_NN = opt.minimize(
+            fun=lambda theta: loss_function(theta, u, true_values, 'NN', {'num_hidden': num_hidden, 'num_models': g}),
+            x0=theta_initial_guess,
+            method='Nelder-Mead',
+            bounds=sp_bounds,
+            callback=callback,
+            options={'disp': True, 'return_all': True, 'adaptive': True, 'maxiter': 100}
+        )
+        
+        if not result_NN.success:
+            print(f"Optimization failed for repetition {rep} with NN discriminator: {result_NN.message}")
+        
+        #result = {result_MLE, result_oracle, result_logistic, result_NN}
+        return rep, theta_initial_guess, result_NN, None
     except Exception as e:
         print(f"Error in repetition {rep}: {str(e)}")
         return rep, None, None, str(e)

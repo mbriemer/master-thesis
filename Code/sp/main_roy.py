@@ -15,7 +15,7 @@ if __name__ == "__main__":
     lower_bounds = np.array([1, 1, -.5, -1, 0, 0, -1])#, 0, 0.9])
     upper_bounds = np.array([3, 3, 1.5, 1, 2, 2, 1])#, 0, 0.9])
 
-    num_samples = 3000
+    num_samples = 300
     num_repetitions = 10
     #n_discriminator = 100
 

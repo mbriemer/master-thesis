@@ -13,7 +13,7 @@ def logistic_loss(X_1, X_2):
     m = len(d_1_2)
     assert n == m, "n == m required for logistic regression loss"
 
-    Y = np.concatenate([np.ones(n), 2 * np.ones(m)])
+    Y = np.concatenate([np.ones(n), 0 * np.ones(m)])
 
     moments_1 = np.column_stack([log_w_1_1, d_1_1, log_w_2_1, d_2_1, log_w_1_1**2, log_w_2_1**2])
     moments_2 = np.column_stack([log_w_1_2, d_1_2, log_w_2_2, d_2_2, log_w_1_2**2, log_w_2_2**2])
