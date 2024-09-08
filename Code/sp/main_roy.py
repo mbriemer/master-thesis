@@ -5,7 +5,7 @@ np.random.seed(83209)
 
 
 #from NND import Discriminator_paper
-from roy_helper_functions import royinv
+from roy import royinv
 from estimation import train_kpm_parallel #train_kpm
 from plotting_functions import plot_theta_values, plot_loss_function
 

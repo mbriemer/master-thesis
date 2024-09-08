@@ -9,11 +9,11 @@ def mvn_inverse_cdf(u, mu, sigma):
 
 def lognormpdf_ml(x, mu = 0, sigma = 1):
     """lognormpdf with Matlab-like arguments"""
-    return np.log(norm.pdf(x, mu, sigma))
+    return norm.logpdf(x, mu, sigma)
 
 def lognormcdf_ml(x, mu = 0, sigma = 1):
     """lognormcdf with Matlab-like arguments"""
-    return np.log(norm.cdf(x, mu, sigma))
+    return norm.logcdf(x, mu, sigma)
 
 def logEexpmax(mu1, mu2, sig1, sig2, rho):
     """logEexpmax.m"""
