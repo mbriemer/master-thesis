@@ -219,6 +219,29 @@ def logroypdf(y, theta):
 
     return p11 + p12 + p21 + p22
 
+def roysupp(y, theta):
+    """roysupp.m"""
+
+    mu_1, mu_2, gamma_1, gamma_2, sigma_1, sigma_2, rho_s = theta
+    rho_t = 0
+    beta = 0.9
+
+    log_w_1, d_1, log_w_2, d_2 = y
+
+    # logbE(1)=log(beta*E[w_2|d_1=1]) 
+    # logbE(2)=log(beta*E[w_2|d_1=2])
+    logbE_1 = np.log(beta) + logEexpmax(mu_1 + gamma_1, mu_2, sigma_1, sigma_2, rho_s)
+    logbE_2 = np.log(beta) + logEexpmax(mu_1, mu_2 + gamma_2, sigma_1, sigma_2, rho_s)
+
+    # log(v1) = log of observed value in period 1
+    log_v_1 = np.logaddexp(log_w_1,
+                            np.where(d_1 == 1, logbE_1, logbE_2))
+    
+    a = np.exp(log_v_1) - np.exp(np.where(d_1 == 2, logbE_1, logbE_2))
+    c = np.min(a)
+
+    return c
+
 u = np.random.rand(300, 4)
 theta = np.array([1.8, 2, 0.5, 0, 1, 1, 0.5])
 
