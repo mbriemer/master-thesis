@@ -5,14 +5,6 @@ from sklearn.linear_model import LogisticRegression
 #from translation import logroypdf
 from roy import logroypdf, royinv
 
-# Helper functions
-
-def loglogisticcdf(x, mu = 0, sigma = 1):
-    """loglogisticcdf.m"""
-    
-
-# Losses
-
 def logistic_loss(X_1, X_2):
     """Function "loss" from main_roy.m"""
     log_w_1_1, d_1_1, log_w_2_1, d_2_1 = X_1
