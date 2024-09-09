@@ -34,7 +34,7 @@ def royinv(noise, theta):
     
     # skip smoothing code for now
 
-    size = np.array(u.shape)
+    size = np.array(noise.shape)
     size = size[1:]
 
     mu_1, mu_2, gamma_1, gamma_2, sigma_1, sigma_2, rho_s = theta
@@ -238,18 +238,34 @@ def roysupp(y, theta):
                             np.where(d_1 == 1, logbE_1, logbE_2))
     
     a = np.exp(log_v_1) - np.exp(np.where(d_1 == 2, logbE_1, logbE_2))
-    c = np.min(a)
+    c = - np.min(a)
 
     return c
 
+def perturb(X, true_theta, lower_bounds, upper_bounds, rng):
+    """Lines 320-328 of main_roy.m"""
+    while True:
+        theta_perturbed = true_theta + rng.normal(0, 0.2, len(true_theta))
+        theta_perturbed = np.clip(theta_perturbed, lower_bounds, upper_bounds)
+        if roysupp(X, theta_perturbed) <= 0:
+            return theta_perturbed
+
+def perturb_uniform(X, lower_bounds, upper_bounds, rng):
+    while True:
+        theta_perturbed = rng.uniform(low=lower_bounds, high=upper_bounds)
+        if roysupp(X, theta_perturbed) <= 0:
+            return theta_perturbed
+
+"""       
+# Testing 
 u = np.random.rand(300, 4)
 theta = np.array([1.8, 2, 0.5, 0, 1, 1, 0.5])
 
-result = royinv(u, theta)
-#print(result)
-result2 = logroypdf(result, theta)
-#print(result2[:10])
+true_values = royinv(u, theta)
+lower_bounds = np.array([1, 1, -.5, -1, 0, 0, -1])
+upper_bounds = np.array([3, 3, 1.5, 1, 2, 2, 1])
 
-
-
+perturbed_theta = perturb(true_values, theta, lower_bounds, upper_bounds)
+print(perturbed_theta)
+"""
 

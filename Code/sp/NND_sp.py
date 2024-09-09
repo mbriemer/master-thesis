@@ -62,9 +62,9 @@ def NND_train(true_samples, fake_samples, num_hidden=10):
     nplusm = len(input_data)
     labels = np.column_stack((np.ones_like(true_samples), np.zeros_like(fake_samples)))[0,:].T
     model = MLPClassifier(hidden_layer_sizes=(num_hidden,),
-                          activation='tanh', #paper
-                          solver='adam',
-                          alpha=0.01, #net.performParam.regularization = 0.01; cannot be easily translated
+                          activation='tanh', #paper; output activation is very likely set to logistic internally
+                          solver='lbfgs',
+                          #alpha=0.01, #net.performParam.regularization = 0.01; cannot be easily translated
                           #batch_size=nplusm, #not needed with lbfgs
                           max_iter=2000)#, learning_rate_init=0.001, early_stopping=True, validation_fraction=0.1)
     model.fit(input_data, labels)
