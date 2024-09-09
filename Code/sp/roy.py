@@ -24,12 +24,11 @@ def logEexpmax(mu1, mu2, sig1, sig2, rho):
     cdf2 = normal_dist.cdf((mu2 - mu1 + sig2**2 - rho * sig1 * sig2) / theta)
     
     e1 = mu1 + sig1**2 / 2 + np.log(cdf1)
-    e2 = mu2 + sig2**2 / 2 + np.log(cdf2)    
+    e2 = mu2 + sig2**2 / 2 + np.log(cdf2)
     e = np.logaddexp(e1, e2)
     return e
 
-
-def royinv(noise, theta):
+def royinv(noise, theta, lambda_ = 0):
     """royinv.m"""
     
     # skip smoothing code for now
@@ -83,6 +82,14 @@ def royinv(noise, theta):
 
     # Observed log wages at t = 2
     log_w_2 = np.where(d_2 == 1, log_w_2_1, log_w_2_2)
+
+    if lambda_ > 0:
+        d_1 = 1 + norm.cdf(log_v_1_1 - log_v_1_2, 
+                           0,
+                           lambda_ * np.std(log_v_1_1 - log_v_1_2))
+        d_2 = 1 + norm.cdf(log_w_2_1 - log_w_2_2,
+                            0,
+                            lambda_ * np.std(log_w_2_1 - log_w_2_2))
 
     return log_w_1, d_1, log_w_2, d_2
 
