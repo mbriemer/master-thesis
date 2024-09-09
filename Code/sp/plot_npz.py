@@ -61,7 +61,7 @@ def plot_line_charts(data, param_names, true_theta, lower_bounds, upper_bounds, 
     plt.savefig(os.path.join(output_dir, 'parameter_evolution.png'))
     plt.close()
 
-def main(date_str):
+def main(date_str, rhot = False):
     if date_str == 'local':
         data_dir = './simres'
         data = load_data(data_dir)
@@ -80,12 +80,18 @@ def main(date_str):
         r'$\gamma_2$',
         r'$\sigma_1$',
         r'$\sigma_2$',
-        r'$\rho_s$'
+        r'$\rho_s$',
     ]
    
     true_theta = [1.8, 2, 0.5, 0, 1, 1, 0.5]
     lower_bounds = np.array([1, 1, -.5, -1, 0, 0, -1])
     upper_bounds = np.array([3, 3, 1.5, 1, 2, 2, 1])
+
+    if rhot == True:
+        param_names.append(r'$\rho_t$')
+        true_theta = np.append(true_theta, 0)
+        lower_bounds = np.append(lower_bounds, -1)
+        upper_bounds = np.append(upper_bounds, 1) 
     
     plot_histograms(data, param_names, output_dir)
     plot_line_charts(data, param_names, true_theta, lower_bounds, upper_bounds, output_dir)
@@ -95,5 +101,6 @@ def main(date_str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate parameter plots with date-specific output.")
     parser.add_argument("date", help="Date string for the output directory (format: YYYYMMDDHHMMSS)")
+    parser.add_argument("rhot", help="Include rho_t in the plots", type=bool)
     args = parser.parse_args()
-    main(args.date)
+    main(args.date, args.rhot)

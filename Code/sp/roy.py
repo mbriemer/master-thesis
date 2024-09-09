@@ -31,13 +31,11 @@ def logEexpmax(mu1, mu2, sig1, sig2, rho):
 def royinv(noise, theta, lambda_ = 0):
     """royinv.m"""
     
-    # skip smoothing code for now
-
-    size = np.array(noise.shape)
-    size = size[1:]
-
-    mu_1, mu_2, gamma_1, gamma_2, sigma_1, sigma_2, rho_s = theta
-    rho_t = 0
+    if len(theta) == 7:
+        mu_1, mu_2, gamma_1, gamma_2, sigma_1, sigma_2, rho_s = theta
+        rho_t = 0
+    else:
+        mu_1, mu_2, gamma_1, gamma_2, sigma_1, sigma_2, rho_s, rho_t = theta
     beta = 0.9
 
     # Covariance matrix
@@ -138,7 +136,6 @@ def logexpnmaxpdf(z,a,b,mu1,mu2,sig1,sig2,rho):
 def logroypdf(y, theta):
     """logroypdf.m"""
     mu_1, mu_2, gamma_1, gamma_2, sigma_1, sigma_2, rho_s = theta
-    rho_t = 0
     beta = 0.9
 
     r = np.sqrt(1-rho_s**2)
@@ -230,7 +227,6 @@ def roysupp(y, theta):
     """roysupp.m"""
 
     mu_1, mu_2, gamma_1, gamma_2, sigma_1, sigma_2, rho_s = theta
-    rho_t = 0
     beta = 0.9
 
     log_w_1, d_1, log_w_2, d_2 = y

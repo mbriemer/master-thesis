@@ -46,8 +46,8 @@ OracleD_grid = np.zeros_like(param_grid)
 LL_grid = np.zeros_like(param_grid)
 
 # Assume these variables are defined elsewhere
-theta = [1.8, 2, 0.5, 0, 1, 1, 0.5]
-#theta2: np.ndarray
+theta = [1.8, 2, 0.5, 0, 1, 1, 0.5, 0]
+
 n = 300
 m = 300
 lambda_ = 0
@@ -60,7 +60,8 @@ param_names = [
         r'$\gamma_2$',
         r'$\sigma_1$',
         r'$\sigma_2$',
-        r'$\rho_s$'
+        r'$\rho_s$',
+        r'$\rho_t$'
     ]
 
 #X = royrnd(theta, n)  # Real observations
