@@ -15,8 +15,8 @@ if __name__ == "__main__":
     g = 30 # Number of neural nets to average over
 
     true_theta = np.array([1.8, 2, 0.5, 0, 1, 1, 0.5, 0]) # switched rho_s and rho_t
-    lower_bounds = np.array([1, 1, -.5, -1, 0, 0, -0.99, -0.99])
-    upper_bounds = np.array([3, 3, 1.5, 1, 2, 2, 0.99, 0.99])
+    lower_bounds = np.array([1, 1, -.5, -1, 0, 0, -1, -1])
+    upper_bounds = np.array([3, 3, 1.5, 1, 2, 2, 1, 1])
 
     # Observations
     Z_X = np.random.rand(n, 4)

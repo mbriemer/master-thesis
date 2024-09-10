@@ -1,9 +1,11 @@
 import numpy as np
 from scipy.stats import norm#, lognorm
+from scipy.linalg import sqrtm
 
 def mvn_inverse_cdf(u, mu, sigma):
     """mvinv.m"""
-    L = np.linalg.cholesky(sigma)
+    #L = np.linalg.cholesky(sigma)
+    L = np.real(sqrtm(sigma))
     z = norm.ppf(u)
     return mu + np.matmul(z, L.T)
 
