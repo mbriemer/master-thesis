@@ -59,10 +59,11 @@ if __name__ == "__main__":
 
     for i in tqdm(range(len(true_theta))):
         for k in tqdm(range(K)):
+            print(f"Parameter {param_names[i]} ({i+1}/{len(true_theta)}), iteration {k+1}/{K}")
             theta = true_theta.copy()
             theta[i] = param_grid[i, k]
             cD_grid[i, k] = logistic_loss_2(X, royinv(Z, theta))[0]
-            #NND_grid[i, k] = generator_loss(X, royinv(Z, theta), num_hidden=10, num_models=g)
+            NND_grid[i, k] = generator_loss(X, royinv(Z, theta), num_hidden=10, num_models=g)
 
     fig, axs = plt.subplots(4, 2)
     axs = axs.flatten()  # Flatten the 2D array of axes to make indexing easier
@@ -70,7 +71,7 @@ if __name__ == "__main__":
     for i in range(len(true_theta)):
         ax = axs[i]
 
-        #ax.plot(param_grid[i, :], NND_grid[i, :], linewidth=1.5, color='blue', label='$\\mathbf{M}_\\theta(\\hat{D}_\\theta)$')
+        ax.plot(param_grid[i, :], NND_grid[i, :], linewidth=1.5, color='blue', label='$\\mathbf{M}_\\theta(\\hat{D}_\\theta)$')
         ax.plot(param_grid[i, :], cD_grid[i, :], linewidth=1.5, color='red', label='$\\mathbf{L}_\\theta$')
 
         ax.axvline(x=true_theta[i], color='r', linestyle='--', label=f'True {param_names[i]}')
