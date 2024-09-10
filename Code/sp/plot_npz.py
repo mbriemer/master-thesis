@@ -8,7 +8,7 @@ from datetime import datetime
 
 def load_data(directory):
     data = []
-    for file_path in glob.glob(os.path.join(directory, 'estimation_result_*.npz')):
+    for file_path in glob.glob(os.path.join(directory, 'intermediate_result_*.npz')):
         with np.load(file_path) as npz:
             data.append({
                 'initial_value': npz['initial_value'],
@@ -61,7 +61,7 @@ def plot_line_charts(data, param_names, true_theta, lower_bounds, upper_bounds, 
     plt.savefig(os.path.join(output_dir, 'parameter_evolution.png'))
     plt.close()
 
-def main(date_str, rhot = False):
+def main(date_str, rhot):
     if date_str == 'local':
         data_dir = './simres'
         data = load_data(data_dir)
@@ -87,7 +87,7 @@ def main(date_str, rhot = False):
     lower_bounds = np.array([1, 1, -.5, -1, 0, 0, -1])
     upper_bounds = np.array([3, 3, 1.5, 1, 2, 2, 1])
 
-    if rhot == True:
+    if rhot == "1":
         param_names.append(r'$\rho_t$')
         true_theta = np.append(true_theta, 0)
         lower_bounds = np.append(lower_bounds, -1)
@@ -101,6 +101,6 @@ def main(date_str, rhot = False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate parameter plots with date-specific output.")
     parser.add_argument("date", help="Date string for the output directory (format: YYYYMMDDHHMMSS)")
-    parser.add_argument("rhot", help="Include rho_t in the plots", type=bool)
+    parser.add_argument("rhot", help="Include rho_t in the plots")
     args = parser.parse_args()
     main(args.date, args.rhot)
