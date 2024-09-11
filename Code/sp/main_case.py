@@ -50,6 +50,8 @@ if __name__ == "__main__":
     true_theta = np.array([1.8, 2, 0.5, 0, 1, 1, 0.5, 0]) # switched rho_s and rho_t
     lower_bounds = np.array([1, 1, -.5, -1, 0, 0, -1, -1])
     upper_bounds = np.array([3, 3, 1.5, 1, 2, 2, 1, 1])
+    wide_lower_bounds = np.array([-10, -10, -10, -10, 0, 0, -1, -1])
+    wide_upper_bounds = np.array([10, 10, 10, 10, 10, 10, 1, 1])
 
     # Observations
     Z_X = np.random.rand(n, 4)
@@ -60,7 +62,7 @@ if __name__ == "__main__":
     theta_initial_guess = true_theta + np.random.normal(0, 0.2, len(true_theta))
     theta_initial_guess = np.clip(theta_initial_guess, lower_bounds, upper_bounds)
 
-    # Pre-estimate with logistic regression
+    """ # Pre-estimate with logistic regression
     print("Pre-estimating with logistic regression")
     AdvL = opt.minimize(lambda theta : logistic_loss_2(X, royinv(Z, theta))[0],
                         x0 = theta_initial_guess,
@@ -68,7 +70,7 @@ if __name__ == "__main__":
                         bounds = list(zip(lower_bounds, upper_bounds)),
                         options={'return_all' : True, 'disp' : True, 'adaptive' : True})
     print(theta_initial_guess)
-    print(AdvL.x)
+    print(AdvL.x) """
     
     # Other code that I skip
 
@@ -85,15 +87,15 @@ if __name__ == "__main__":
         r'$\rho_s$',
         r'$\rho_t$'
     ]
-    """
+    
 
 
-    param_grid = np.linspace(lower_bounds, upper_bounds, K).T
+    param_grid = np.linspace(wide_lower_bounds, wide_upper_bounds, K).T
     cD_grid = np.zeros_like(param_grid)
     NND_grid = np.zeros_like(param_grid)
 
-    for i in tqdm(range(len(true_theta))):
-        for k in tqdm(range(K)):
+    for i in range(len(true_theta)):
+        for k in range(K):
             print(f"Parameter {param_names[i]} ({i+1}/{len(true_theta)}), iteration {k+1}/{K}")
             theta = true_theta.copy()
             theta[i] = param_grid[i, k]
@@ -106,24 +108,27 @@ if __name__ == "__main__":
     for i in range(len(true_theta)):
         ax = axs[i]
 
-        ax.plot(param_grid[i, :], NND_grid[i, :], linewidth=1.5, color='blue', label='$\\mathbf{M}_\\theta(\\hat{D}_\\theta)$')
-        ax.plot(param_grid[i, :], cD_grid[i, :], linewidth=1.5, color='red', label='$\\mathbf{L}_\\theta$')
+        ax.plot(param_grid[i, :], NND_grid[i, :], linewidth=1.5, color='blue', label='NN')
+        ax.plot(param_grid[i, :], cD_grid[i, :], linewidth=1.5, color='red', label='Logistic')
 
         ax.axvline(x=true_theta[i], color='r', linestyle='--', label=f'True {param_names[i]}')
 
-        ax.set_xlim(lower_bounds[i], upper_bounds[i])
-        ax.set_ylim(-1.4, -1.25)
+        max = np.max([np.max(NND_grid[i, :]), np.max(cD_grid[i, :])])
+        min = np.min([np.min(NND_grid[i, :]), np.min(cD_grid[i, :])])
+        ax.set_xlim(wide_lower_bounds[i], wide_upper_bounds[i])
+        ax.set_ylim(min, max)
 
         ax.legend(loc='best', frameon=False)
 
     plt.tight_layout()
-    plt.savefig('./simres/loss_plots.png') 
-    """
+    plt.savefig('./simres/loss_plots.png')
+    np.savez('./simres/loss_plots.npz', param_grid=param_grid, cD_grid=cD_grid, NND_grid=NND_grid) 
+   
     #plt.show()
 
     # Estimation
 
-    num_processes = mp.cpu_count()
+    """ num_processes = mp.cpu_count()
 
     args_list = [(rep, Z, X, n, m, lower_bounds, upper_bounds, AdvL.x, g) for rep in range(S)]
 
@@ -134,4 +139,4 @@ if __name__ == "__main__":
             rep, initial_value, final_value = result
             np.savez(f'./simres/intermediate_result_{rep}.npz', 
                      initial_value=initial_value, 
-                     final_value=final_value)
+                     final_value=final_value) """

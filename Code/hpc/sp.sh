@@ -1,13 +1,13 @@
 #!/bin/sh
 
-#SBATCH --partition=intelsr_medium
-#SBATCH --time=05:30:00
+#SBATCH --partition=intelsr_short
+#SBATCH --time=00:30:00
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=32
+#SBATCH --cpus-per-task=1
 #SBATCH --output="simres/%j.out"
 
 source ~/.bashrc
 conda deactivate
 conda activate my_research_env
 
-python $HOME/sp/main_roy.py
+python $HOME/sp/main_case.py
