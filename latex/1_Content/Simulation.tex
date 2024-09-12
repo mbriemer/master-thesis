@@ -2,3 +2,44 @@
 \label{sec:simulation}
 
 Now I undertake a simulation study in Python, utilizing the library \texttt{pytorch} (\textcite{Ansel_PyTorch_2_Faster_2024}).
+
+First, I reproduce parts of the author's simulation in the scientific Python stack, more precisely, using the packages numpy, scipy, and scikit-learn (\textcite{harris2020array}, \textcite{2020SciPy-NMeth}, and \textcite{scikit-learn}, respectively).
+My code is available %TODO %on GitHub? %upon request?
+%TODO cite Matlab?
+
+The replication package can be downloaded from the journal website.
+It contains the author's simulation code, written in Matlab. %TODO cite?
+As the authors state in the readme file, the simulations for the Roy model are contained in the files \texttt{main\_roy.m} (Figures 6, 7) and \texttt{main\_case.m} (Figures 8, 9, and Table I).
+They draw on functions in other files to simulate data and calculate losses.
+
+Both main files share a general structure:
+After setting parameters of the simulation itself (e.g. sample sizes, number of simulation runs) and the Roy model, the values of loss functions are calcuted along a grid and then rendered to created Figures 6 and 8.
+Thereafter, real and fake observations are generated and the estimation is performed on them
+
+%TODO keep writing
+
+The authors' code for the neural network discriminator is in \texttt{NND.m}.
+It uses Matlab's \texttt{patternnet} and \texttt{train}.
+The scientific Python stack comes with limited support for neural networks, but I can sufficiently approximate the author's discriminator using \texttt{sklearn.neural\_network.MLPClassifier}.
+
+Following the authors, I create a net with 1 hidden layer containing 10 nodes, followed by the tanh activation function.
+Inspecting sklearn's source code reveals that a logistic output activation function is automatically set. %TODO verfiy, also that this matches sigmoid
+Because the conjugate-gradient descent algorithm is not available to train \texttt{MLPClassifier}, I use the Adam algorithm (\textcite{diederik2014adam}).
+It is popular for training neural networks and achieves comparable results in my case. %TODO
+
+\texttt{MLPClassifier}'s default convergence criteria cause my code to raise warnings about non-convergence of the discriminator nets.
+This is not completely mitigated even by setting \texttt{max\_iter} (the maximum number of iterations of the optimizer) to 2000 (10 times the default value), at the cost of a longer runtime. %TODO verify
+Nevertheless, the networks converge well enough under the default settings. %TODO
+Leaving \texttt{max\_iter} at 200, but increasing \texttt{tol}, the tolerance of the convergence criterium, five- or tenfold mitigates the warnings but results in flatter and less smooth loss functions. %TODO: why flatter?
+
+The authors also set the normalization and regularization parameters of \texttt{patternnet}.
+Since these are handled differently in \texttt{MLPClassifier}, I do not translate this adaption.
+
+My simulations show that these modifications do not significantly alter the shape of the loss curves. %Factcheck, show figure
+
+For the outer optimization loop that trains the generator, the authors use the custom \texttt{fminsearchcon} function (\textcite{DErrico2024}).
+This is a wrapper that adds support for bounds and nonlinear constraints to Matlab's built-in \texttt{fminsearch}, which employs the Nelder-Mead simplex algorithm (\textcite{lagarias1998convergence}) to minimize a function without computing gradients.
+I employ \texttt{scipy.optimize.minimize}, which natively supports the Nelder-Mead algorithm with bounds and nonlinear constraints.
+I set an option to perform a version of the Nelder-Mead algorithm that's adapted to higher-dimensional problems, which shows improved convergence in my simulation. %TODO verify
+
+I employ the \texttt{mp} module from Python's standard library to parallelize simulation runs on an HPC cluster (cf. \ref{sec:acknowledgement_of_system_use}).
