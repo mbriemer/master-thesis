@@ -1,10 +1,7 @@
 # Implementation of the Roy model simulation that is very close to the original code
-#import estimagic as em
 import numpy as np
 #np.random.seed(83209)
 
-
-#from NND import Discriminator_paper
 from roy import royinv
 from estimation import train_kpm_parallel #train_kpm
 from plotting_functions import plot_theta_values, plot_loss_function
@@ -17,9 +14,9 @@ if __name__ == "__main__":
 
     num_samples = 3000
     num_repetitions = 10
-    #n_discriminator = 100
+    num_discriminators = 30
 
-    results = train_kpm_parallel(royinv, true_theta, num_hidden=10, g=1, num_samples=num_samples, num_repetitions=num_repetitions)
+    results = train_kpm_parallel(royinv, true_theta, num_hidden=10, g=num_discriminators, num_samples=num_samples, num_repetitions=num_repetitions)
 
     # Process and save results
     for rep, initial_value, result, error in results:

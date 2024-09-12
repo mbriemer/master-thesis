@@ -4,7 +4,7 @@ from numpy.random import choice
 import scipy.optimize as opt
 import matplotlib.pyplot as plt
 import multiprocessing as mp
-from tqdm import tqdm
+#from tqdm import tqdm
 
 from roy import royinv
 from other_discriminators import logistic_loss_2
@@ -37,7 +37,7 @@ def run_single_repetition(args):
                         method='Nelder-Mead',
                         bounds = list(zip(lower_bounds, upper_bounds)),
                         callback=callback,
-                        options={'return_all' : True, 'disp' : True, 'adaptive' : True, 'maxiter' : 50})
+                        options={'return_all' : True, 'disp' : True, 'adaptive' : True})
     
     return rep, theta_0, AdvN.x
 
@@ -87,8 +87,6 @@ if __name__ == "__main__":
         r'$\rho_s$',
         r'$\rho_t$'
     ]
-    
-
 
     param_grid = np.linspace(wide_lower_bounds, wide_upper_bounds, K).T
     cD_grid = np.zeros_like(param_grid)
@@ -122,7 +120,7 @@ if __name__ == "__main__":
 
     plt.tight_layout()
     plt.savefig('./simres/loss_plots.png')
-    np.savez('./simres/loss_plots.npz', param_grid=param_grid, cD_grid=cD_grid, NND_grid=NND_grid) 
+    np.savez('./simres/loss_plots.npz', param_grid=param_grid, cD_grid=cD_grid, NND_grid=NND_grid)
    
     #plt.show()
 

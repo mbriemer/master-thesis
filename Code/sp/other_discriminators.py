@@ -2,7 +2,6 @@ import numpy as np
 from scipy.stats import logistic
 from sklearn.linear_model import LogisticRegression
 
-#from translation import logroypdf
 from roy import logroypdf, royinv
 
 def logistic_loss(X_1, X_2):

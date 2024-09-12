@@ -42,3 +42,45 @@ def plot_loss_function(results, filename='loss_function.png'):
     plt.tight_layout()
     plt.savefig(filename)
     plt.close()
+
+def plot_results(results):
+    """moved from roy_helper_functions.py"""
+    all_mu_values, all_sigma_values, all_discriminator_losses, all_generator_losses, iteration_numbers = results
+    num_repetitions = len(all_mu_values)
+    
+    plt.figure(figsize=(12, 5))
+
+    # Plot mu
+    plt.subplot(2, 2, 1)
+    for rep in range(num_repetitions):
+        plt.plot(iteration_numbers, all_mu_values[rep], color='C0', alpha=0.5, linewidth=0.5)
+    plt.title('μ over iterations')
+    plt.xlabel('Iteration')
+    plt.ylabel('μ')
+    
+    # Plot sigma
+    plt.subplot(2, 2, 2)
+    for rep in range(num_repetitions):
+        plt.plot(iteration_numbers, all_sigma_values[rep], color='C0', alpha=0.5, linewidth=0.5)
+    plt.title('σ over iterations')
+    plt.xlabel('Iteration')
+    plt.ylabel('σ')
+    
+    # Plot discriminator loss
+    plt.subplot(2, 2, 3)
+    for rep in range(num_repetitions):
+        plt.plot(iteration_numbers, all_discriminator_losses[rep], color='C0', alpha=0.5, linewidth=0.5)
+    plt.title('Discriminator loss over iterations')
+    plt.xlabel('Iteration')
+    plt.ylabel('Loss')
+
+    # Plot generator loss
+    plt.subplot(2, 2, 4)
+    for rep in range(num_repetitions):
+        plt.plot(iteration_numbers, all_generator_losses[rep], color='C0', alpha=0.5, linewidth=0.5)
+    plt.title('Generator loss over iterations')
+    plt.xlabel('Iteration')
+    plt.ylabel('Loss')
+    
+    plt.tight_layout()
+    plt.show()
