@@ -68,7 +68,7 @@ def main(date_str, rhot):
         current_datetime = datetime.now().strftime("%Y%m%d%H%M%S")
         output_dir = f'../simres/simres_local_{current_datetime}'
     else:
-        output_dir = f'~/simres/simres_{date_str}'
+        output_dir = f'../simres/simres_{date_str}'
         data = load_data(output_dir)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
