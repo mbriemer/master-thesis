@@ -1,6 +1,9 @@
 \section{Method}
 \label{sec:method}
 
+\subsection{Background}
+\label{sec:background}
+
 Consider the problem of estimating the parameters of a structural economic model.
 %TODO Is this a good framing?
 For $k \in \{1,\dots,K\}$, let
@@ -9,19 +12,96 @@ For $k \in \{1,\dots,K\}$, let
     Y_k = f_{\Theta}(X_k, Z_k; ),
 \end{equation}
 
-where $Y_k$ is a vector of outcome variables influenced by a vector of noise variables $Z_k$ via a set of (possibly endogeneous) variables $X_k$.
+where $Y_k$ is a vector of outcome variables influenced by a vector of noise variables $Z_k$. %via a set of (possibly endogeneous) variables $X_k$.
 The strength and functional form of the relationships between the variables is defined by a function $f$ and its parameters $\Theta$.
+
+A common approach to this problem is maximum likelihood estimation, that is, to find $\hat{\theta}$ such that
+
+\begin{equation}
+    \hat{\theta} = \underset{\theta\in\Theta}{\operatorname{arg\;max}}\,\mathcal{L}_{n}(\theta\,;\mathbf{y}) ~.
+\end{equation}
+
+However, for some more sophisticated economic models, it is not easy or even possible to calculate the likelihood function.
+
+This motivates further approaches, such as simulation methods, which attempts to infer $\theta$ based on a simulation of the true data.
+Most notable among these is perhaps the simulated method of moments.
+
+The question naturally arises of how to judge whether the simulated distribution comes sufficiently close to the real distribution.
+This is one motivation for adversarial estimation.
+
+\subsection{Adversarial estimation}
+\label{sec:adversarial_estimation}
+
+The basic idea of adversarial estimation is to structure the parameter estimation around two auxiliary models, called the \textit{generator} and the \textit{discriminator}.
+They ``play against each other'' based on a parameter estimate $\hat{\theta_{t}}$ which gets updated iteratively. 
+The generator $G(\hat{\theta}) : Z \rightarrow O$ creates simulated data based on a guess of the true parameter value $\hat{\theta}$.
+The discriminator $D_t : O \rightarrow [0 , 1]$ is a classifier that returns the probability of a given observation being real rather than coming from the generator.
+If \text{loss} is some objective function that measures the distance between the fake and real samples, the adversarial estimator solve the problem
+ 
+\begin{equation}
+\label{eq:adversarial_estimator}
+    \hat{\theta_{adv}} = \underset{\theta \in \Theta}{\arg \min } \max _{D \in \mathcal{D}_n} \text{loss}(D(X_i), D(G(\theta))).
+\end{equation}
+
+Note that this game has a clear Nash-Equilibrium
+
+This method is a variant of ``Generative Adversarial Networks'', first proposed by \textcite{goodfellow2014generative} (later published as \textcite{goodfellow2020generative}).
+There, two neural networks take the role of generator and discriminator and instead of estimating a parameter vector, noise is transformed into some output, such as an image.
+While GANs achieved great success in image generation and related tasks, %cite?
+they are not directly suitable for structural estimation.
+One reason is that the functional form of the generator network is usually very complex, with nodes being fully connected and activation functions being used.
+Relatedly, the exact architecture of a neural network is usually not chosen to be economically (or at all) interpretable, but rather as an imprecise ``art'' based on predictive performance.
+Therefore, one essential contribution of \textcite{kaji2023adversarial} is to impose that the generator has the structure of an economic model.
+This model being fully specified by $\theta$ is what makes adversarial estimation meaningful.
+It wouldn't be if $\theta$ were a long list of the weights and biases in a multi-layered neural network.
+
+An implementation of \ref{eq:adversarial_estimator} looks, generally, like algorithm \ref{alg:adversarial_estimation}.
 
 \begin{algorithm}
     \caption{Adversarial estimation}
     \label{alg:adversarial_estimation}
     \begin{algorithmic}
-        \STATE Initialize
-        \FOR{number of iterations}
-            \STATE Update the discriminator
-            \STATE Update the generator
-        \ENDFOR
+        \STATE Set necessary hyperparameters and initial values
+        \STATE Sample real observations
+        %TODO when sample noise?
+        \WHILE{Stopping criterion does not hold}
+            \STATE Generate fake observations from the current generator
+            \STATE Train the discriminator given the fake observations
+            \STATE Calculate the loss
+            \STATE Update $\hat{\theta}$ %the generator
+        \ENDWHILE
     \end{algorithmic}
 \end{algorithm}
 
-The GAN was first proposed by \textcite{goodfellow2014generative} (later published as \textcite{goodfellow2020generative}).
+There are various ways to fill in the details of this algorithm.
+The stopping criterion might be a convergence criterion of the generator's optimization problem, or simply a sufficiently high number of repetitions being reached.
+%TODO when sample noise?
+The discriminator might take various forms, which I discuss below.
+There are two canonical choices for the loss function, which I discuss afterwards.
+The updates of the generator can be done with a gradient descent algorithm if it is differentiable or at least smooth enough that calculating numerical gradients will not lead an optimizer astray.
+Otherwise, they should be performed with a gradient-free optimization procedure.
+
+Algorithm 1 in \textcite{kaji2023adversarial} illustrates one way to fill out the details of \ref{alg:adversarial_estimation}.
+They use convergence as a stopping criterion, a (not necessarily trained to completion) neural network discriminator, cross-entropy loss, and update the generator using a version of the popular Adam algorithm (\cite{diederik2014adam}), which requires setting a range of hyperparameters.
+Their simulation code shows another way. %, which I discuss in detail in section \ref{sec:simulation},
+There, they compare a range of estimators (including neural networks trained to completion) and update the generator using a gradient-free approach.
+
+Now I discuss some of these terms in detail.
+
+\subsection{Types of discriminators}
+\label{sec:discriminators}
+
+MLE?
+Oracle
+Logistic regression
+SMM? II?
+Neural nets
+
+\subsection{Losses}
+\label{sec:losses}
+
+\subsubsection{Cross-entropy loss}
+\label{sec:ce_loss}
+
+\subsubsection{Wasserstein loss}
+\label{sec:wasserstein_loss}

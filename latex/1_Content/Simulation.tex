@@ -1,7 +1,11 @@
 \section{Simulation}
 \label{sec:simulation}
 
-Now I undertake a simulation study in Python, utilizing the library \texttt{pytorch} (\textcite{Ansel_PyTorch_2_Faster_2024}).
+
+\subsection{The Roy model}
+\label{sec:roy}
+
+The authors simulate estimation of the Roy model, a discrete choice model which has intractable likelihood for certain parameter values.
 
 First, I reproduce parts of the author's simulation in the scientific Python stack, more precisely, using the packages numpy, scipy, and scikit-learn (\textcite{harris2020array}, \textcite{2020SciPy-NMeth}, and \textcite{scikit-learn}, respectively).
 My code is available %TODO %on GitHub? %upon request?
@@ -13,10 +17,19 @@ As the authors state in the readme file, the simulations for the Roy model are c
 They draw on functions in other files to simulate data and calculate losses.
 
 Both main files share a general structure:
-After setting parameters of the simulation itself (e.g. sample sizes, number of simulation runs) and the Roy model, the values of loss functions are calcuted along a grid and then rendered to created Figures 6 and 8.
-Thereafter, real and fake observations are generated and the estimation is performed on them
+After setting parameters of the simulation itself (e.g. sample sizes, number of simulation runs) and the Roy model, the values of loss functions are calculated along a linear grid and then rendered to created Figures 6 and 8.
+Thereafter, real and fake observations are generated and the estimation is performed on them.
+It is implemented as a constrained minimization of a loss function which in turn calculates the discriminators. %TODO write better
+The constraints are bounds on the parameters of the Roy model, on which the authors do not futher elaborate, but which are likely added for computational efficiency. %TODO true?
+Where necessary, an additional nonlinear constraint enforces that the guesses of the minimizer stay within the support of the roy model.
+
 
 %TODO keep writing
+
+\subsection{Implementation details}
+\label{sec:Implementation}
+
+\subsubsection{Discriminators}
 
 The authors' code for the neural network discriminator is in \texttt{NND.m}.
 It uses Matlab's \texttt{patternnet} and \texttt{train}.
@@ -37,9 +50,18 @@ Since these are handled differently in \texttt{MLPClassifier}, I do not translat
 
 My simulations show that these modifications do not significantly alter the shape of the loss curves. %Factcheck, show figure
 
-For the outer optimization loop that trains the generator, the authors use the custom \texttt{fminsearchcon} function (\textcite{DErrico2024}).
-This is a wrapper that adds support for bounds and nonlinear constraints to Matlab's built-in \texttt{fminsearch}, which employs the Nelder-Mead simplex algorithm (\textcite{lagarias1998convergence}) to minimize a function without computing gradients.
+\subsubsection{Generators}
+
+For the outer optimization loop that trains the generator, the authors use the third-party \texttt{fminsearchcon} function (\textcite{DErrico2024}).
+This is a wrapper function that adds support for bounds and nonlinear constraints to Matlab's built-in \texttt{fminsearch}, which employs the Nelder-Mead simplex algorithm (\textcite{lagarias1998convergence}) to minimize a function without computing gradients.
 I employ \texttt{scipy.optimize.minimize}, which natively supports the Nelder-Mead algorithm with bounds and nonlinear constraints.
 I set an option to perform a version of the Nelder-Mead algorithm that's adapted to higher-dimensional problems, which shows improved convergence in my simulation. %TODO verify
 
 I employ the \texttt{mp} module from Python's standard library to parallelize simulation runs on an HPC cluster (cf. \ref{sec:acknowledgement_of_system_use}).
+
+\subsection{Wasserstein}
+%TODO label
+
+To demonstrate the effect of adding the Wasserstein loss, I program another simulation using \texttt{pytorch} (\textcite{Ansel_PyTorch_2_Faster_2024}), a popular and highly developed neural network library.
+The library GeomLoss (\textcite{feydy2019interpolating}) allows me to add an approximation of the Wasserstein loss to it.
+Besides the Wasserstein loss, I also add several other best practices taken from \cite{athey2021using}.
