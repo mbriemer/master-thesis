@@ -1,8 +1,12 @@
-\section{Method}
-\label{sec:method}
+%\section{Method}
+%\label{sec:method}
 
-\subsection{Background}
+\section{Background} %TODO make section?
 \label{sec:background}
+
+
+\subsection{Structural estimation}
+\label{sec:structural_estimation}
 
 Consider the problem of estimating the parameters of a structural economic model.
 %TODO Is this a good framing?
@@ -28,8 +32,17 @@ Most notable among these is perhaps the simulated method of moments.
 
 The question naturally arises of how to judge whether the simulated distribution comes sufficiently close to the real distribution.
 This is one motivation for adversarial estimation.
+It is also intuitive that one aproach to this involves classification.
+In machine learning, popular tool for classification are neural networks, which I introduce next.
 
-\subsection{Adversarial estimation}
+\subsection{Neural networks}
+\label{sec:neural_networks}
+
+Definition
+
+Training
+
+\section{Adversarial estimation}
 \label{sec:adversarial_estimation}
 
 The basic idea of adversarial estimation is to structure the parameter estimation around two auxiliary models, called the \textit{generator} and the \textit{discriminator}.
@@ -88,20 +101,77 @@ There, they compare a range of estimators (including neural networks trained to 
 
 Now I discuss some of these terms in detail.
 
-\subsection{Types of discriminators}
+\subsection{Some discriminators}
 \label{sec:discriminators}
 
-MLE?
-Oracle
-Logistic regression
-SMM? II?
-Neural nets
+Recall the unique Nash equilibrium from \dots.
+If the true densities $p_0$ and $p_\theta(x)$ are known, we get the \textit{oracle discriminator}. %\dots shows that in the unique Nash equilibrium the discriminator assigns each $x$ the probability
+
+\begin{definition}
+    The \textbf{oracle discriminator} assigns
+    \begin{equation}
+        D_\theta(x):=\frac{p_0(x)}{p_0(x)+p_\theta(x)} %TODO delete theta index or copy to others?
+    \end{equation}
+    to every $x \in$ . %TODO    
+\end{definition}
+
+\textcite{kaji2023adversarial} call this the \textit{oracle discriminator}.
+Of course, $p_0$ and $p_\theta(x)$ are unkown in practice.
+Also, this discriminator is only optimal in the Nash equilibrium
+as off-equilibrium, it neglects to update from the prior proabilities $p_0$ and $p_\theta(x)$.  %TODO maybe write more about htis
+Nevertheless, it is useful as a benchmark in simulations and has an interesting theoretical property:
+If the simulated sample size $m \rightarrow \infty$, $\theta_{oracle}$ approaches $\theta_{MLE}$. %(why) is this true in the general case?
+
+A simple statistical method for classification is logistic regression.
+Inspired by the simulation study in \textcite{kaji2023adversarial}, I consider a version that regresses on some collection of features of the data points and moments of the data.
+
+\begin{definition}
+    Let $\Lambda$ be a sigmoid function with values in $(0,1)$, and $x^{mom}$ an $(i+j)\times k$-matrix of features and moments of the data calculated for each data point.
+    Let $(\beta_0, \dots,\beta_k \in \mathbb{R}^{k+1})$ be coefficients of a logistic regression run with $x^{mom}$ as a regressor and an output vecor $Y$ consisting of 0s and 1s for the simulated and true observations. %wording
+    Then the \textbf{logistic discriminator} assigns
+    \begin{equation}
+        D(x) = \Lambda(\beta_{0} + \sum_{k=1}^{K}\beta_{k} x_{k}^{mom}) %TODO can I write x_k^mom like this?
+    \end{equation}
+    to every $x \in$ . %TODO
+\end{definition}
+
+Note that this classifier has to be calculated anew after each update of $\theta$.
+While this is calculation will usually be fast on modern computers, the same is not necessarily true of the potentially more powerful neural network discriminator.
+
+\begin{definition}
+    Define a classifier neural network $\mathcal{N}: \mathcal{X}^k \rightarrow [0, 1]$ by: %TODO, what to call input space and general formalism
+    \begin{equation} 
+        \mathcal{N}(x) = \sigma_L(W_L \sigma_{L-1}(W_{L-1} \cdots \sigma_1(W_1 x + b_1) \cdots + b_{L-1}) + b_L),
+    \end{equation}
+    where $x \in \mathbb{R}^n$ is the input vector, $L$ is the number of layers, $W_i$ are weight matrices, $b_i$ are bias vectors, $\sigma_i$ are activation functions. %TODO rewrite
+    Assume that this network has been trained at least one step on the classification problem at hand. %TODO wording
+    Then the \textbf{neural network discriminator} assigns
+    \begin{equation}
+        D(x) = \mathcal{N}(x)
+    \end{equation}
+    to every $x \in$ . %TODO
+\end{definition}
+
+While neural networks are fully defined by their structure, activation functions, weights, and biases, the latter two are the result of their training.
+So to implement the neural net classifier in practice, its training has to be specified, including training algorithm, hyperparameters, and number of training steps.
+\dots
 
 \subsection{Losses}
 \label{sec:losses}
 
 \subsubsection{Cross-entropy loss}
 \label{sec:ce_loss}
+
+Following \textcite{goodfellow2014generative}, \textcite{kaji2023adversarial} chose to minimize:
+
+\begin{definition}
+    The empirical cross-entropy loss:
+    $$
+    \frac{1}{n} \sum_{i=1}^n \log D\left(X_i\right)+\frac{1}{m} \sum_{i=1}^m \log \left(1-D\left(X_{i, \theta}\right)\right) \text {. }
+    $$
+    
+\end{definition}
+
 
 \subsubsection{Wasserstein loss}
 \label{sec:wasserstein_loss}
