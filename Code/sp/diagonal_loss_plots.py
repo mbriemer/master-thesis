@@ -80,4 +80,5 @@ for i in range(2):
     ax.legend(loc='best', frameon=False)
 
 plt.tight_layout()
-plt.show()
+plt.savefig('./simres/diagonal_loss_plots.png')
+# plt.show()
