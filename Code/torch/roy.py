@@ -8,9 +8,6 @@ def mvn_inverse_cdf(u, mu, sigma):
     # Ensure L is real
     L = L.real
     
-    # Ensure L is real
-    L = L.real
-    
     # Compute the inverse CDF (percent point function)
     z = torch.special.ndtri(u)  # equivalent to norm.ppf in SciPy
     
@@ -34,19 +31,19 @@ def royinv(noise, theta, lambda_ = 0):
     
     if len(theta) == 7:
         mu_1, mu_2, gamma_1, gamma_2, sigma_1, sigma_2, rho_s = theta
-        rho_t = torch.tensor(0)
+        rho_t = torch.tensor(0, device=theta.device)
     else:
         mu_1, mu_2, gamma_1, gamma_2, sigma_1, sigma_2, rho_s, rho_t = theta
-    beta = torch.tensor(0.9)
+    beta = torch.tensor(0.9, device=theta.device)
 
     # Covariance matrix
     Sigma = torch.tensor([[sigma_1**2, rho_s * sigma_1 * sigma_2, rho_t * sigma_1**1, rho_s * rho_t * sigma_1 * sigma_2],
                       [rho_s * sigma_1 * sigma_2, sigma_2**2, rho_s * rho_t * sigma_1 * sigma_2, rho_t * sigma_2**2],
                       [rho_t * sigma_1**2, rho_s * rho_t * sigma_1 * sigma_2, sigma_1**2, rho_s * sigma_1 * sigma_2],
-                      [rho_s * rho_t * sigma_1 * sigma_2, rho_t * sigma_2**2, rho_s * sigma_1 * sigma_2, sigma_2**2]])
+                      [rho_s * rho_t * sigma_1 * sigma_2, rho_t * sigma_2**2, rho_s * sigma_1 * sigma_2, sigma_2**2]], device=theta.device)
     
     # Shocks
-    epsilons = mvn_inverse_cdf(noise, torch.zeros(4), Sigma)
+    epsilons = mvn_inverse_cdf(noise, torch.zeros(4, device=theta.device), Sigma)
     eps_1_1 = epsilons[:,0]
     eps_1_2 = epsilons[:,1]
     eps_2_1 = epsilons[:,2]
@@ -90,7 +87,7 @@ def royinv(noise, theta, lambda_ = 0):
                                                       0,
                                                       lambda_ * torch.std(log_w_2_1 - log_w_2_2))
 
-    return log_w_1, d_1, log_w_2, d_2
+    return torch.stack([log_w_1, d_1, log_w_2, d_2], dim = 1)
 
 """ # Testing 
 u = torch.rand(300, 4)
