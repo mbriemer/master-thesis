@@ -1,5 +1,10 @@
 #!/bin/bash
 
-scp -r ./torch/ gpu:~
-scp ./hpc/torch.sh gpu:~/torch/torch.sh
-ssh gpu "sbatch ~/torch/torch.sh" && ssh gpu
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 <torch or sp>"
+    exit 1
+fi
+
+scp -r ./$1/ gpu:~
+scp ./hpc/$1.sh gpu:~/$1/$1.sh
+ssh gpu "sbatch ~/$1/$1.sh" && ssh gpu
