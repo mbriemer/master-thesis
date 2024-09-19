@@ -4,7 +4,6 @@
 \section{Background} %TODO make section?
 \label{sec:background}
 
-
 \subsection{Structural estimation}
 \label{sec:structural_estimation}
 
@@ -107,7 +106,7 @@ Now I discuss some of these terms in detail.
 Recall the unique Nash equilibrium from \dots.
 If the true densities $p_0$ and $p_\theta(x)$ are known, we get the \textit{oracle discriminator}. %\dots shows that in the unique Nash equilibrium the discriminator assigns each $x$ the probability
 
-\begin{definition}
+\begin{definition}[Oracle discriminator]
     The \textbf{oracle discriminator} assigns
     \begin{equation}
         D_\theta(x):=\frac{p_0(x)}{p_0(x)+p_\theta(x)} %TODO delete theta index or copy to others?
@@ -125,7 +124,7 @@ If the simulated sample size $m \rightarrow \infty$, $\theta_{oracle}$ approache
 A simple statistical method for classification is logistic regression.
 Inspired by the simulation study in \textcite{kaji2023adversarial}, I consider a version that regresses on some collection of features of the data points and moments of the data.
 
-\begin{definition}
+\begin{definition}[Logistic discriminator]
     Let $\Lambda$ be a sigmoid function with values in $(0,1)$, and $x^{mom}$ an $(i+j)\times k$-matrix of features and moments of the data calculated for each data point.
     Let $(\beta_0, \dots,\beta_k \in \mathbb{R}^{k+1})$ be coefficients of a logistic regression run with $x^{mom}$ as a regressor and an output vecor $Y$ consisting of 0s and 1s for the simulated and true observations. %wording
     Then the \textbf{logistic discriminator} assigns
@@ -138,7 +137,7 @@ Inspired by the simulation study in \textcite{kaji2023adversarial}, I consider a
 Note that this classifier has to be calculated anew after each update of $\theta$.
 While this is calculation will usually be fast on modern computers, the same is not necessarily true of the potentially more powerful neural network discriminator.
 
-\begin{definition}
+\begin{definition}[Neural network discriminator]
     Define a classifier neural network $\mathcal{N}: \mathcal{X}^k \rightarrow [0, 1]$ by: %TODO, what to call input space and general formalism
     \begin{equation} 
         \mathcal{N}(x) = \sigma_L(W_L \sigma_{L-1}(W_{L-1} \cdots \sigma_1(W_1 x + b_1) \cdots + b_{L-1}) + b_L),
