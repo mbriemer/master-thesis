@@ -1,5 +1,5 @@
 #!/bin/bash
 
-scp -r ./sp/ gpu:~
-scp ./hpc/sp.sh gpu:~/sp/sp.sh
-ssh gpu "sbatch ~/sp/sp.sh" && ssh gpu
+scp -r ./torch/ gpu:~
+scp ./hpc/torch.sh gpu:~/torch/torch.sh
+ssh gpu "sbatch ~/torch/torch.sh" && ssh gpu

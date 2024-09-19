@@ -1,7 +1,7 @@
 #!/bin/sh
 
 #SBATCH --partition=mlgpu_short
-#SBATCH --time=02:40:00
+#SBATCH --time=00:30:00
 #SBATCH --gpus=1
 #SBATCH --output="simres/%j.out"
 
