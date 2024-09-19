@@ -4,18 +4,9 @@ from scipy.linalg import sqrtm
 
 def mvn_inverse_cdf(u, mu, sigma):
     """mvinv.m"""
-    #L = np.linalg.cholesky(sigma)
     L = np.real(sqrtm(sigma))
     z = norm.ppf(u)
     return mu + np.matmul(z, L.T)
-
-def lognormpdf_ml(x, mu = 0, sigma = 1):
-    """lognormpdf with Matlab-like arguments"""
-    return norm.logpdf(x, mu, sigma)
-
-def lognormcdf_ml(x, mu = 0, sigma = 1):
-    """lognormcdf with Matlab-like arguments"""
-    return norm.logcdf(x, mu, sigma)
 
 def logEexpmax(mu1, mu2, sig1, sig2, rho):
     """logEexpmax.m"""
@@ -96,14 +87,14 @@ def royinv(noise, theta, lambda_ = 0):
 def lognmaxpdf(x,mu_1,mu_2,sig_1,sig_2,rho):
     """lognmaxpdf from logroypdf.m"""
     if rho == 1:
-        if lognormcdf_ml(x, mu_1, sig_1) < lognormcdf_ml(x, mu_2, sig_2):
-            return lognormpdf_ml(x, mu_1, sig_1)
+        if norm.logcdf(x, mu_1, sig_1) < norm.logcdf(x, mu_2, sig_2):
+            return norm.lopdf(x, mu_1, sig_1)
         else:
-            return lognormpdf_ml(x, mu_2, sig_2)
+            return norm.lopdf(x, mu_2, sig_2)
         
     elif rho == -1:
-        if lognormcdf_ml(x, mu_1, sig_1) >= (1 - lognormcdf_ml(x, mu_2, sig_2)):
-            return np.logaddexp(lognormpdf_ml(x, mu_1, sig_1), lognormpdf_ml(x, mu_2, sig_2))
+        if norm.logcdf(x, mu_1, sig_1) >= (1 - norm.logcdf(x, mu_2, sig_2)):
+            return np.logaddexp(norm.lopdf(x, mu_1, sig_1), norm.lopdf(x, mu_2, sig_2))
         else:
             return -np.inf
         
@@ -112,8 +103,8 @@ def lognmaxpdf(x,mu_1,mu_2,sig_1,sig_2,rho):
         r = np.sqrt(1 - rho**2)
         x_1 = (x - mu_1) / sig_1 / r
         x_2 = (x - mu_2) / sig_2 / r
-        p_1 = lognormpdf_ml(x, mu_1, sig_1) + lognormcdf_ml(x_2 - rho * x_1)
-        p_2 = lognormpdf_ml(x, mu_2, sig_2) + lognormcdf_ml(x_1 - rho * x_2)
+        p_1 = norm.lopdf(x, mu_1, sig_1) + norm.logcdf(x_2 - rho * x_1)
+        p_2 = norm.lopdf(x, mu_2, sig_2) + norm.logcdf(x_1 - rho * x_2)
         if np.all(np.isnan(np.logaddexp(p_1, p_2))):
             pass
         return np.logaddexp(p_1, p_2)
@@ -126,11 +117,11 @@ def logexpnmaxpdf(z,a,b,mu1,mu2,sig1,sig2,rho):
     logza = np.log(z[j] - a)
     r = np.sqrt(1 - rho**2)
 
-    p1 = -logzb + lognormpdf_ml(logzb, mu2, sig2) + \
-                  lognormcdf_ml(logza, mu1 + rho * sig1/sig2 * (logzb - mu2), r * sig1)
+    p1 = -logzb + norm.lopdf(logzb, mu2, sig2) + \
+                  norm.logcdf(logza, mu1 + rho * sig1/sig2 * (logzb - mu2), r * sig1)
     
-    p2 = -logza + lognormpdf_ml(logza, mu1, sig1) + \
-                  lognormcdf_ml(logzb, mu2 + rho * sig2/sig1 * (logza - mu1), r * sig2)
+    p2 = -logza + norm.lopdf(logza, mu1, sig1) + \
+                  norm.logcdf(logzb, mu2 + rho * sig2/sig1 * (logza - mu1), r * sig2)
     
     p[j] = np.logaddexp(p1, p2)
     return p
@@ -166,18 +157,18 @@ def logroypdf(y, theta):
     p11[i] = logexpnmaxpdf(np.exp(log_v_1[i]), np.exp(logbE_1), np.exp(logbE_2), mu_1, mu_2, sigma_1, sigma_2, rho_s)
 
     # Conditional log pdf of d1 given v1
-    p1d = lognormpdf_ml(log_w_1[i],
+    p1d = norm.lopdf(log_w_1[i],
                                 np.where(d_1 == 1, mu_1, mu_2)[i],
                                 np.where(d_1 == 1, sigma_1, sigma_2)[i]) + \
-                   lognormcdf_ml(np.log(a[i]),
+                   norm.logcdf(np.log(a[i]),
                                  np.where(d_1 == 2, mu_1, mu_2)[i] + rho_s * \
                                  np.where(d_1 == 2, sigma_1, sigma_2)[i] / np.where(d_1 == 1, sigma_1, sigma_2)[i] * \
                                  (log_w_1[i] - np.where(d_1 == 1, mu_1, mu_2)[i]),
                                  r * np.where(d_1 == 2, sigma_1, sigma_2)[i])
-    p1e = lognormpdf_ml(np.log(a[i]),
+    p1e = norm.lopdf(np.log(a[i]),
                                  np.where(d_1 == 2, mu_1, mu_2)[i],
                                  np.where(d_1 == 2, sigma_1, sigma_2)[i]) + \
-                   lognormcdf_ml(log_w_1[i],
+                   norm.logcdf(log_w_1[i],
                                 np.where(d_1 == 1, mu_1, mu_2)[i] + rho_s * \
                                 np.where(d_1 == 1, sigma_1, sigma_2)[i] / np.where(d_1 == 2, sigma_1, sigma_2)[i] * \
                                 (np.log(a[i]) - np.where(d_1 == 2, mu_1, mu_2)[i]),
@@ -196,11 +187,11 @@ def logroypdf(y, theta):
     
     # Conditional log pdf of d2 given (w1,d1)
 
-    p2d = lognormpdf_ml(log_w_2,
+    p2d = norm.lopdf(log_w_2,
                   np.where(d_2 == 1, mu_1, mu_2) + 
                   np.where(d_2 == 1, gamma_1, gamma_2) * (d_1 == d_2),
                   np.where(d_2 == 1, sigma_1, sigma_2)) + \
-          lognormcdf_ml(log_w_2,
+          norm.logcdf(log_w_2,
                   np.where(d_2 == 2, mu_1, mu_2) + 
                   np.where(d_2 == 2, gamma_1, gamma_2) * (d_1 != d_2) + 
                   rho_s * np.where(d_2 == 2, sigma_1, sigma_2) / np.where(d_2 == 1, sigma_1, sigma_2) * 
@@ -208,11 +199,11 @@ def logroypdf(y, theta):
                    np.where(d_2 == 1, gamma_1, gamma_2) * (d_1 == d_2)),
                   r * np.where(d_2 == 2, sigma_1, sigma_2))
     
-    p2e = lognormpdf_ml(log_w_2,
+    p2e = norm.lopdf(log_w_2,
                   np.where(d_2 == 2, mu_1, mu_2) + 
                   np.where(d_2 == 2, gamma_1, gamma_2) * (d_1 != d_2),
                   np.where(d_2 == 2, sigma_1, sigma_2)) + \
-          lognormcdf_ml(log_w_2,
+          norm.logcdf(log_w_2,
                   np.where(d_2 == 1, mu_1, mu_2) + 
                   np.where(d_2 == 1, gamma_1, gamma_2) * (d_1 == d_2) + 
                   rho_s * np.where(d_2 == 1, sigma_1, sigma_2) / np.where(d_2 == 2, sigma_1, sigma_2) * 
