@@ -8,5 +8,6 @@
 source ~/.bashrc
 conda deactivate
 conda activate mt
+module load CUDA/12.4.0
 
 python ~/test/test_torch.py
