@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 import matplotlib.pyplot as plt
 from geomloss import SamplesLoss
 #from tqdm import tqdm
@@ -134,7 +135,7 @@ for k in range(K):
     theta[0] = param_ranges[0][k]
     theta[1] = -param_ranges[1][-k-1]
     NND_grid_diag[1, k] = generator_loss(X, royinv(Z, theta), Discriminator_paper, criterion, n_discriminator, g)
-    #cD_grid_diag[1, k] = logistic_loss_2(X, royinv(Z, theta))[0]
+    #cD_grid_diag[1, k] = logistic_loss_2(X, royinv(Z, theta))[0]  """
 
 criterion = SamplesLoss("sinkhorn", p=1, blur=0.01) # Approximately Wasserstein-1 distance
 
@@ -150,10 +151,14 @@ for k in range(K):
     theta[0] = param_ranges[0][k]
     theta[1] = -param_ranges[1][-k-1]
     NND_grid_diag[3, k] = generator_loss(X, royinv(Z, theta), Discriminator_paper, criterion, n_discriminator, g)
-    #cD_grid_diag[1, k] = logistic_loss_2(X, royinv(Z, theta))[0]
+    #cD_grid_diag[1, k] = logistic_loss_2(X, royinv(Z, theta))[0] """
 
+param_ranges = [param_range.cpu().numpy() for param_range in param_ranges]
 NND_grid_diag = NND_grid_diag.detach().cpu().numpy()
 #cD_grid_diag = cD_grid_diag.detach().cpu().numpy()
+true_theta = true_theta.cpu().numpy()
+wide_lower_bounds = wide_lower_bounds.cpu().numpy()
+wide_upper_bounds = wide_upper_bounds.cpu().numpy()
 
 fig, axs = plt.subplots(2, 2)
 axs = axs.flatten()
@@ -167,8 +172,8 @@ for i in range(4):
     for j in range(2):
         ax.axvline(x=true_theta[j], color='black', linestyle='--', label=f'True {param_names[j]}')
 
-    max = torch.max([torch.max(NND_grid_diag[i, :])]) + 0.1#, torch.max(cD_grid_diag[i, :])])
-    min = torch.min([torch.min(NND_grid_diag[i, :])]) - 0.1#, torch.min(cD_grid_diag[i, :])])
+    max = np.max([np.max(NND_grid_diag[i, :])]) + 0.1#, np.max(cD_grid_diag[i, :])]) + 0.1
+    min = np.min([np.min(NND_grid_diag[i, :])]) - 0.1#, np.min(cD_grid_diag[i, :])]) - 0.1
     ax.set_xlim(wide_lower_bounds[0], wide_upper_bounds[0])
     ax.set_ylim(min, max)
 
