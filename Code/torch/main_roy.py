@@ -13,11 +13,11 @@ print(device)
 # Simulation hyperarameters
 n = m = 300
 lambda_ = 0
-g = 30
+g = 1
 S = 1
 
 # Neural net hyperparameters
-n_discriminator = 60
+n_discriminator = 1000
 #criterion = torch.nn.BCELoss()
 #criterion = SamplesLoss("sinkhorn", p=1, blur=0.01) # Approximate Wasserstein-1 distance
 
@@ -137,22 +137,23 @@ for k in range(K):
     NND_grid_diag[1, k] = generator_loss(X, royinv(Z, theta), Discriminator_paper, criterion, n_discriminator, g)
     #cD_grid_diag[1, k] = logistic_loss_2(X, royinv(Z, theta))[0]  """
 
-criterion = SamplesLoss("sinkhorn", p=1, blur=0.01) # Approximately Wasserstein-1 distance
+wasserstein = SamplesLoss("sinkhorn", p=1, blur=0.01) # Approximately Wasserstein-1 distance
 
 for k in range(K):
     theta = true_theta.clone()
     theta[0] = param_ranges[0][k]
     theta[1] = -param_ranges[1][-k-1]
-    NND_grid_diag[2, k] = generator_loss(X, royinv(Z, theta), Discriminator_paper, criterion, n_discriminator, g)
+    NND_grid_diag[2, k] = wasserstein(X, royinv(Z, theta))#generator_loss(X, royinv(Z, theta), Discriminator_paper, criterion, n_discriminator, g)
     #cD_grid_diag[1, k] = logistic_loss_2(X, royinv(Z, theta))[0]
 
 for k in range(K):
     theta = true_theta.clone()
     theta[0] = param_ranges[0][k]
     theta[1] = -param_ranges[1][-k-1]
-    NND_grid_diag[3, k] = generator_loss(X, royinv(Z, theta), Discriminator_paper, criterion, n_discriminator, g)
+    NND_grid_diag[3, k] = wasserstein(X, royinv(Z, theta))#generator_loss(X, royinv(Z, theta), Discriminator_paper, criterion, n_discriminator, g)
     #cD_grid_diag[1, k] = logistic_loss_2(X, royinv(Z, theta))[0] """
 
+# Move tensors back to numpy for plotting
 param_ranges = [param_range.cpu().numpy() for param_range in param_ranges]
 NND_grid_diag = NND_grid_diag.detach().cpu().numpy()
 #cD_grid_diag = cD_grid_diag.detach().cpu().numpy()
@@ -160,6 +161,7 @@ true_theta = true_theta.cpu().numpy()
 wide_lower_bounds = wide_lower_bounds.cpu().numpy()
 wide_upper_bounds = wide_upper_bounds.cpu().numpy()
 
+# Draw loss landscape plots
 fig, axs = plt.subplots(2, 2)
 axs = axs.flatten()
 
