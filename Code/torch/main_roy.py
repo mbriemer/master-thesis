@@ -18,8 +18,8 @@ S = 1
 
 # Neural net hyperparameters
 n_discriminator = 1000
-#criterion = torch.nn.BCELoss()
-#criterion = SamplesLoss("sinkhorn", p=1, blur=0.01) # Approximate Wasserstein-1 distance
+criterion = torch.nn.BCELoss()
+wasserstein = SamplesLoss("sinkhorn", p=2, blur=0.01) # Approximately Wasserstein-p distance
 
 # True parameter values
 true_theta = torch.tensor([1.8, 2, 0.5, 0, 1, 1, 0.5, 0], device=device)
@@ -32,7 +32,7 @@ wide_upper_bounds = torch.tensor([10, 10, 10, 10, 10, 10, 1, 1], device=device)
 K = 30
 param_ranges = [torch.linspace(start, end, K, device=device) for start, end in zip(wide_lower_bounds, wide_upper_bounds)]
 
-""" cD_grid = torch.zeros((len(true_theta), K), device=device)
+cD_grid = torch.zeros((len(true_theta), K), device=device)
 NND_grid = torch.zeros((len(true_theta), K), device=device)
 OracleD_grid = torch.zeros((len(true_theta), K), device=device)
 LL_grid = torch.zeros((len(true_theta), K), device=device)
@@ -63,7 +63,7 @@ for i in range(len(true_theta)):
         theta = true_theta.clone()
         theta[i] = param_ranges[i][k]  
         #cD_grid[i, k] = loss(X, royinv(Z, th, smooth=lambda_))
-        NND_grid[i, k] = generator_loss(X, royinv(Z, theta), Discriminator_paper, criterion, n_discriminator, g)
+        NND_grid[i, k] = wasserstein(X, royinv(Z, theta)) #generator_loss(X, royinv(Z, theta), Discriminator_paper, criterion, n_discriminator, g)
         #OracleD_grid[i, k] = OracleD(X, royinv(Z, th), theta, th)
         #LL_grid[i, k] = -np.mean(logroypdf(X, th)) / 2
 
@@ -99,11 +99,11 @@ for i in range(len(true_theta)):
 plt.tight_layout()
 #plt.show()
 plt.savefig('./simres/loss_plots.png')
-#np.savez('./simres/loss_plots.npz', param_grid=param_grid, cD_grid=cD_grid, NND_grid=NND_grid) """
+#np.savez('./simres/loss_plots.npz', param_grid=param_grid, cD_grid=cD_grid, NND_grid=NND_grid)
 
 ### Diagonal loss plots
 
-Z = torch.rand(m, 4).to(device)
+""" Z = torch.rand(m, 4).to(device)
 X = royinv(Z, true_theta)
 
 n_diags = 4
@@ -121,8 +121,6 @@ param_names = [
         r'$\rho_t$'
 ]
 
-criterion = torch.nn.BCELoss()
-
 for k in range(K):
     theta = true_theta.clone()
     theta[0] = param_ranges[0][k]
@@ -135,9 +133,8 @@ for k in range(K):
     theta[0] = param_ranges[0][k]
     theta[1] = -param_ranges[1][-k-1]
     NND_grid_diag[1, k] = generator_loss(X, royinv(Z, theta), Discriminator_paper, criterion, n_discriminator, g)
-    #cD_grid_diag[1, k] = logistic_loss_2(X, royinv(Z, theta))[0]  """
+    #cD_grid_diag[1, k] = logistic_loss_2(X, royinv(Z, theta))[0]
 
-wasserstein = SamplesLoss("sinkhorn", p=1, blur=0.01) # Approximately Wasserstein-1 distance
 
 for k in range(K):
     theta = true_theta.clone()
@@ -151,7 +148,7 @@ for k in range(K):
     theta[0] = param_ranges[0][k]
     theta[1] = -param_ranges[1][-k-1]
     NND_grid_diag[3, k] = wasserstein(X, royinv(Z, theta))#generator_loss(X, royinv(Z, theta), Discriminator_paper, criterion, n_discriminator, g)
-    #cD_grid_diag[1, k] = logistic_loss_2(X, royinv(Z, theta))[0] """
+    #cD_grid_diag[1, k] = logistic_loss_2(X, royinv(Z, theta))[0]
 
 # Move tensors back to numpy for plotting
 param_ranges = [param_range.cpu().numpy() for param_range in param_ranges]
@@ -182,4 +179,4 @@ for i in range(4):
     ax.legend(loc='best', frameon=False)
 
 plt.tight_layout()
-plt.savefig('./simres/diagonal_loss_plots.png')
+plt.savefig('./simres/diagonal_loss_plots.png') """
