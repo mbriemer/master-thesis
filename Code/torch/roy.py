@@ -32,9 +32,12 @@ def royinv(noise, theta, lambda_ = 0):
     if len(theta) == 7:
         mu_1, mu_2, gamma_1, gamma_2, sigma_1, sigma_2, rho_s = theta
         rho_t = torch.tensor(0, device=theta.device)
-    else:
+        beta = torch.tensor(0.9, device=theta.device)
+    elif len(theta) == 8:
         mu_1, mu_2, gamma_1, gamma_2, sigma_1, sigma_2, rho_s, rho_t = theta
-    beta = torch.tensor(0.9, device=theta.device)
+        beta = torch.tensor(0.9, device=theta.device)
+    elif len(theta) == 9:
+        mu_1, mu_2, gamma_1, gamma_2, sigma_1, sigma_2, rho_s, rho_t, beta = theta
 
     # Covariance matrix
     Sigma = torch.tensor([[sigma_1**2, rho_s * sigma_1 * sigma_2, rho_t * sigma_1**1, rho_s * rho_t * sigma_1 * sigma_2],
