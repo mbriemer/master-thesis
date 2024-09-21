@@ -5,7 +5,7 @@ from geomloss import SamplesLoss
 #from tqdm import tqdm
 
 from roy import royinv
-from NND import Discriminator_paper, generator_loss
+from NND import Discriminator_paper, My_old_discriminator, generator_loss
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
@@ -52,7 +52,6 @@ param_names = [
         r'$\beta$'
     ]
 
-
 # Latent variables for synthetic observations
 Z = torch.rand(m, 4).to(device)
 # Synthetic observations
@@ -64,7 +63,7 @@ X = royinv(Z, true_theta)
         theta = true_theta.clone()
         theta[i] = param_ranges[i][k]  
         #cD_grid[i, k] = loss(X, royinv(Z, th, smooth=lambda_))
-        NND_grid[i, k] = wasserstein(X, royinv(Z, theta)) #generator_loss(X, royinv(Z, theta), Discriminator_paper, criterion, n_discriminator, g)
+        NND_grid[i, k] = generator_loss(X, royinv(Z, theta), My_old_discriminator, criterion, n_discriminator, g)
         #OracleD_grid[i, k] = OracleD(X, royinv(Z, th), theta, th)
         #LL_grid[i, k] = -np.mean(logroypdf(X, th)) / 2
 
@@ -77,7 +76,6 @@ lower_bounds = lower_bounds.cpu().numpy()
 upper_bounds = upper_bounds.cpu().numpy()
 wide_lower_bounds = wide_lower_bounds.cpu().numpy()
 wide_upper_bounds = wide_upper_bounds.cpu().numpy()
-
 
 fig, axs = plt.subplots(4, 2)
 axs = axs.flatten()
@@ -100,11 +98,11 @@ for i in range(len(true_theta)):
 plt.tight_layout()
 #plt.show()
 plt.savefig('./simres/loss_plots.png')
-#np.savez('./simres/loss_plots.npz', param_grid=param_grid, cD_grid=cD_grid, NND_grid=NND_grid) """
+ """#np.savez('./simres/loss_plots.npz', param_grid=param_grid, cD_grid=cD_grid, NND_grid=NND_grid)
 
-### Diagonal loss plots
+### Diagonal loss plots ###
 
-""" Z = torch.rand(m, 4).to(device)
+Z = torch.rand(m, 4).to(device)
 X = royinv(Z, true_theta)
 
 n_diags = 4
@@ -149,9 +147,9 @@ for k in range(K):
     theta[0] = param_ranges[0][k]
     theta[1] = -param_ranges[1][-k-1]
     NND_grid_diag[3, k] = wasserstein(X, royinv(Z, theta))#generator_loss(X, royinv(Z, theta), Discriminator_paper, criterion, n_discriminator, g)
-    #cD_grid_diag[1, k] = logistic_loss_2(X, royinv(Z, theta))[0] """
+    #cD_grid_diag[1, k] = logistic_loss_2(X, royinv(Z, theta))[0]
 
-""" # Move tensors back to numpy for plotting
+# Move tensors back to numpy for plotting
 param_ranges = [param_range.cpu().numpy() for param_range in param_ranges]
 NND_grid_diag = NND_grid_diag.detach().cpu().numpy()
 #cD_grid_diag = cD_grid_diag.detach().cpu().numpy()
@@ -180,11 +178,11 @@ for i in range(4):
     ax.legend(loc='best', frameon=False)
 
 plt.tight_layout()
-plt.savefig('./simres/diagonal_loss_plots.png') """
+plt.savefig('./simres/diagonal_loss_plots.png')
 
 #### Loss plot for beta ###
 
-true_theta = torch.tensor([1.8, 2, 0.5, 0, 1, 1, 0.5, 0, 0.9], device=device)
+""" true_theta = torch.tensor([1.8, 2, 0.5, 0, 1, 1, 0.5, 0, 0.9], device=device)
 lower_bounds = torch.tensor([1, 1, -.5, -1, 0, 0, -1, -1, 0], device=device)
 upper_bounds = torch.tensor([3, 3, 1.5, 1, 2, 2, 1, 1, 2], device=device)
 wide_lower_bounds = torch.tensor([-10, -10, -10, -10, 0, 0, -1, -1, 0], device=device)
@@ -223,4 +221,4 @@ ax[0].set_ylim(np.min(wasserstein_grid[0, :]) - 0.1, np.max(wasserstein_grid[0, 
 ax[1].set_ylim(np.min(CE_grid[0, :]) - 0.1, np.max(CE_grid[0, :]) + 0.1)
 
 plt.tight_layout()
-plt.savefig('./simres/beta_loss_plots.png')
+plt.savefig('./simres/beta_loss_plots.png') """
