@@ -32,7 +32,7 @@ Most notable among these is perhaps the simulated method of moments.
 The question naturally arises of how to judge whether the simulated distribution comes sufficiently close to the real distribution.
 This is one motivation for adversarial estimation.
 It is also intuitive that one aproach to this involves classification.
-In machine learning, popular tool for classification are neural networks, which I introduce next.
+In machine learning, a popular tool for classification are neural networks, which I introduce next.
 
 \subsection{Neural networks}
 \label{sec:neural_networks}
@@ -137,7 +137,7 @@ In line with the simulation study in \textcite{kaji2023adversarial}, I consider 
 \end{definition}
 
 Note that this classifier has to be calculated anew after each update of $\theta$.
-While this is calculation will usually be fast on modern computers, the same is not necessarily true of the potentially more powerful neural network discriminator.
+While this calculation will usually be fast on modern computers, the same is not necessarily true of the potentially more powerful neural network discriminator.
 Therefore, neural networks are often not trained to completion in practice and we different training procedures might result in different discriminators.
 
 \begin{definition}[Neural network discriminator]
@@ -164,7 +164,7 @@ To understand more deeply the loss landscape which a neural network discriminato
 \label{sec:ce_loss}
 
 %Following \textcite{goodfellow2014generative}, \textcite{kaji2023adversarial} choose the classical GAN objective.
-The classical way to turn the proabilities $\mathcal{D}(x)$ into an objective for the generator is the following: 
+The classical way to turn the proabilities $D(x)$ into an objective for the generator is the following: 
 
 \begin{definition}[Cross-entropy loss] %TODO not a loss in the sense in which I used the term above!
     The empirical cross-entropy loss (CE) is:
@@ -173,7 +173,7 @@ The classical way to turn the proabilities $\mathcal{D}(x)$ into an objective fo
     $$    
 \end{definition}
 
-A discriminator that maximizes the cross-entropy loss therebay calculates the Jensen-Shannon divergence (plus a constant) for the generator to minimize.
+A discriminator that maximizes the cross-entropy loss thereby calculates the Jensen-Shannon divergence (plus a constant) for the generator to minimize.
 \begin{theorem}[\cite{goodfellow2014generative}]
     $\cdots$
 \end{theorem}
@@ -196,10 +196,10 @@ Luckily, there are $\cdots$
 Using the so-called Wasserstein-1 distance as an optimization target for the generator was first proposed by \Textcite{arjovsky2017wassersteingan}.%TODO later published?
 
 \begin{definition}[Wasserstein-p distance]
-    For two probability distribution $\mathbb{P}_0$ and $\mathbb{P}_G$, let $\Pi (\mathbb{P}_0, \mathbb{P}_G)$ be the set of all joint distributions $\gamma(x, y)$ whose marginals are $\mathbb{P}_r and \mathbb{P}_g$.
+    For two probability distribution $\mathbb{P}_0$ and $\mathbb{P}_G$, let $\Pi (\mathbb{P}_0, \mathbb{P}_G)$ be the set of all joint distributions $\gamma(x, y)$ whose marginals are $\mathbb{P}_r$ and $\mathbb{P}_g$.
     Then for $p \geq 1$,%\in [1, +\infty]$,
     $$
-    W_p(\mu, \nu) = \inf_{\gamma \in \Gamma(\mu, \nu)} \left(\mathbf{E}_{(x, y) \sim \gamma} d(x, y)^p \right)^{1/p},
+    W_p(\mathbb{P}_0, \mathbb{P}_G) = \inf_{\gamma \in \Gamma(\mathbb{P}_0, \mathbb{P}_G)} \left(\mathbf{E}_{(x, y) \sim \gamma} d(x, y)^p \right)^{1/p},
     $$
     is the Wasserstein-p distance (also Wasserstein p-distance) between $\mathbb{P}_0$ and $\mathbb{P}_G$.
 \end{definition}
@@ -227,8 +227,9 @@ They themselves describe this approach as ``clearly terrible'', since there is n
 
 \Textcite{gulrajani2017improvedtrainingwassersteingans} propose to penalize the norm of the gradient of the critic with respect to its input.
 This solution has been more widely accepted and is also used by \textcite{athey2021using}.
-%TODO how much theory? def more
+
+%TODO how much theory? def more? or just sketch?
 Of course, it is also possible to approximate the Wasserstein-1 distance without training a neural network.
 Since the Wasserstein distance is the solution to an optimal transport problem, it can be derived using a ``Pseudo-auction algorithm''.
 For differentiability, this algorithm can than be approximated using a smoothed ``soft-auction'' algorithm.
-The divergence resulting from this algorithm is called the \textit{Sinkhorn divergence.}
+The divergence resulting from this algorithm is called the \textit{Sinkhorn divergence.} %TODO divergence???

@@ -1,21 +1,19 @@
 \section{Simulation}
 \label{sec:simulation}
 
-The authors simulate estimation of the Roy model, a discrete choice model which has intractable likelihood for certain parameter values.
+The authors simulate the estimation of the Roy model, a discrete choice model which has intractable likelihood for certain parameter values.
 
 \subsection{The Roy model}
 \label{sec:roy}
 
-The author's and my simulation focus on the Roy model.
-
 The Roy model models a set of agents chosing which sector to work in in each of two time periods.
 At the start of the game, nature determines the wages offered to each agent, by the following formulas:
-In the first time period, each agent $i$ observes the (natural logarithms of the) wages $log w_{i11}$ and $log w_{i12}$ offered to them in the two sectors.
+In the first time period, each agent $i$ observes the (natural logarithms of the) wages log $w_{i11}$ and log $w_{i12}$ offered to them in the two sectors.
 Knowing their own discount factor $\beta$ and the parameters $\gamma_1$ and $\gamma_2$, they solve the dynamic progamming problem
 and pick a sector for the first period.
-In the second period, they observe the wages  $log w_{i21}$ and $log w_{i12}$ and pick a sector. %Formula
+In the second period, they observe the wages log $w_{i21}$ and log $w_{i12}$ and pick a sector. %Formula
 
-The researcher observes the realized wages $log w_1$ and $log w_2$ and as well as the corresponding sector choices $d_1, d_2 \in {1, 2}$.
+The researcher observes the realized wages log $w_1$ and log $w_2$ and as well as the corresponding sector choices $d_1, d_2 \in {1, 2}$.
 
 \subsection{General simulation structure}
 
