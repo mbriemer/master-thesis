@@ -31,7 +31,7 @@ def royinv(noise, theta, lambda_ = 0):
     
     if len(theta) == 7:
         mu_1, mu_2, gamma_1, gamma_2, sigma_1, sigma_2, rho_s = theta
-        rho_t = torch.tensor(0, device=theta.device)
+        rho_t = torch.tensor(0., device=theta.device)
         beta = torch.tensor(0.9, device=theta.device)
     elif len(theta) == 8:
         mu_1, mu_2, gamma_1, gamma_2, sigma_1, sigma_2, rho_s, rho_t = theta
@@ -40,11 +40,13 @@ def royinv(noise, theta, lambda_ = 0):
         mu_1, mu_2, gamma_1, gamma_2, sigma_1, sigma_2, rho_s, rho_t, beta = theta
 
     # Covariance matrix
-    Sigma = torch.tensor([[sigma_1**2, rho_s * sigma_1 * sigma_2, rho_t * sigma_1**1, rho_s * rho_t * sigma_1 * sigma_2],
-                      [rho_s * sigma_1 * sigma_2, sigma_2**2, rho_s * rho_t * sigma_1 * sigma_2, rho_t * sigma_2**2],
-                      [rho_t * sigma_1**2, rho_s * rho_t * sigma_1 * sigma_2, sigma_1**2, rho_s * sigma_1 * sigma_2],
-                      [rho_s * rho_t * sigma_1 * sigma_2, rho_t * sigma_2**2, rho_s * sigma_1 * sigma_2, sigma_2**2]], device=theta.device)
-    
+    Sigma = torch.stack([
+        torch.stack([sigma_1**2, rho_s * sigma_1 * sigma_2, rho_t * sigma_1**2, rho_s * rho_t * sigma_1 * sigma_2]),
+        torch.stack([rho_s * sigma_1 * sigma_2, sigma_2**2, rho_s * rho_t * sigma_1 * sigma_2, rho_t * sigma_2**2]),
+        torch.stack([rho_t * sigma_1**2, rho_s * rho_t * sigma_1 * sigma_2, sigma_1**2, rho_s * sigma_1 * sigma_2]),
+        torch.stack([rho_s * rho_t * sigma_1 * sigma_2, rho_t * sigma_2**2, rho_s * sigma_1 * sigma_2, sigma_2**2])
+    ], dim=0)
+
     # Shocks
     epsilons = mvn_inverse_cdf(noise, torch.zeros(4, device=theta.device), Sigma)
     eps_1_1 = epsilons[:,0]
@@ -63,7 +65,7 @@ def royinv(noise, theta, lambda_ = 0):
                              torch.log(beta) + logEexpmax(mu_1, mu_2 + gamma_2, sigma_1, sigma_2, rho_s))
     
     # Sector choices at t = 1
-    d_1 = torch.where(log_v_1_1 > log_v_1_2, 1, 2)
+    d_1 = torch.where(log_v_1_1 > log_v_1_2, 1., 2.)
 
     # Observed log wages at t = 1
     log_w_1 = torch.where(d_1 == 1, log_w_1_1, log_w_1_2)
@@ -77,18 +79,16 @@ def royinv(noise, theta, lambda_ = 0):
                         mu_2 + eps_2_2)
 
     # Sector choices at t = 2
-    d_2 = torch.where(log_w_2_1 > log_w_2_2, 1, 2)
+    d_2 = torch.where(log_w_2_1 > log_w_2_2, 1., 2.)
 
     # Observed log wages at t = 2
     log_w_2 = torch.where(d_2 == 1, log_w_2_1, log_w_2_2)
 
     if lambda_ > 0:
-        d_1 = 1 + torch.distributions.Normal(0,1).cdf(log_v_1_1 - log_v_1_2, 
-                                                      0,
-                                                      lambda_ * torch.std(log_v_1_1 - log_v_1_2))
-        d_2 = 1 + torch.distributions.Normal(0,1).cdf(log_w_2_1 - log_w_2_2,
-                                                      0,
-                                                      lambda_ * torch.std(log_w_2_1 - log_w_2_2))
+        d_1 = 1 + torch.distributions.Normal(0,
+                                             lambda_ * torch.std(log_v_1_1 - log_v_1_2)).cdf(log_v_1_1 - log_v_1_2)
+        d_2 = 1 + torch.distributions.Normal(0,
+                                             lambda_ * torch.std(log_w_2_1 - log_w_2_2)).cdf(log_w_2_1 - log_w_2_2)
 
     return torch.stack([log_w_1, d_1, log_w_2, d_2], dim = 1)
 
