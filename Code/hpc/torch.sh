@@ -1,7 +1,7 @@
 #!/bin/sh
 
 #SBATCH --partition=mlgpu_short
-#SBATCH --time=00:02:00
+#SBATCH --time=00:30:00
 #SBATCH --gpus=1
 #SBATCH --output="simres/%j.out"
 
@@ -10,4 +10,4 @@ conda deactivate
 conda activate mt
 module load CUDA/12.4.0
 
-python $HOME/torch/main_roy.py
+python $HOME/torch/main_case.py
