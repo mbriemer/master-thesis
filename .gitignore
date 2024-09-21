@@ -486,3 +486,4 @@ pyrightconfig.json
 *.txt
 *.png
 *.npz
+*.pt
