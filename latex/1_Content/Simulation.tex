@@ -1,15 +1,35 @@
 \section{Simulation}
 \label{sec:simulation}
 
+The authors simulate estimation of the Roy model, a discrete choice model which has intractable likelihood for certain parameter values.
 
 \subsection{The Roy model}
 \label{sec:roy}
 
-The authors simulate estimation of the Roy model, a discrete choice model which has intractable likelihood for certain parameter values.
+The author's and my simulation focus on the Roy model.
+
+The Roy model models a set of agents chosing which sector to work in in each of two time periods.
+At the start of the game, nature determines the wages offered to each agent, by the following formulas:
+In the first time period, each agent $i$ observes the (natural logarithms of the) wages $log w_{i11}$ and $log w_{i12}$ offered to them in the two sectors.
+Knowing their own discount factor $\beta$ and the parameters $\gamma_1$ and $\gamma_2$, they solve the dynamic progamming problem
+and pick a sector for the first period.
+In the second period, they observe the wages  $log w_{i21}$ and $log w_{i12}$ and pick a sector. %Formula
+
+The researcher observes the realized wages $log w_1$ and $log w_2$ and as well as the corresponding sector choices $d_1, d_2 \in {1, 2}$.
+
+\subsection{General simulation structure}
 
 First, I reproduce parts of the author's simulation in the scientific Python stack, more precisely, using the packages numpy, scipy, and scikit-learn (\textcite{harris2020array}, \textcite{2020SciPy-NMeth}, and \textcite{scikit-learn}, respectively).
 My code is available %TODO %on GitHub? %upon request?
 %TODO cite Matlab?
+
+I program another simulation using \texttt{PyTorch} (\cite{Ansel_PyTorch_2_Faster_2024}), a popular and highly developed neural network library for Python.
+Among the advantages of Pytorch is that it offers support for training neural networks on GPUs %TODO which has what precise advantages?
+Additionally, the library \texttt{GeomLoss} (\cite{feydy2019interpolating}) builds on PyTorch. 
+Its \texttt{SampleLoss} function provides the Sinkhorn approximations of the Wasserstein-1 and -2 distances.
+It is also optimized for running on GPUs by virtue of being built on \texttt{KeOps} (\cite{KeOps}).
+%Besides the Wasserstein loss, I also add several other best practices taken from \cite{athey2021using}.
+I generate plots using \texttt{Matplotlib} (\cite{Matplotlib}).
 
 The replication package can be downloaded from the journal website.
 It contains the author's simulation code, written in Matlab. %TODO cite?
@@ -59,9 +79,11 @@ I set an option to perform a version of the Nelder-Mead algorithm that's adapted
 
 I employ the \texttt{mp} module from Python's standard library to parallelize simulation runs on an HPC cluster (cf. \ref{sec:acknowledgement_of_system_use}).
 
-\subsection{Wasserstein}
-%TODO label
+\subsection{Cross-sections of the loss landscape}
 
-To demonstrate the effect of adding the Wasserstein loss, I program another simulation using \texttt{pytorch} (\textcite{Ansel_PyTorch_2_Faster_2024}), a popular and highly developed neural network library.
-The library GeomLoss (\textcite{feydy2019interpolating}) allows me to add an approximation of the Wasserstein loss to it.
-Besides the Wasserstein loss, I also add several other best practices taken from \cite{athey2021using}.
+I reproduce the cross-section of the loss landscape from Figure %TODO
+
+Looking at the wider intervals, it is striking that for some parameters, the loss is flat when moving to far away from the optimal value.
+Partly, this can be explained by the dynamics of the Roy model.
+
+\subsection{Estimation}

@@ -44,15 +44,15 @@ Training
 \section{Adversarial estimation}
 \label{sec:adversarial_estimation}
 
-The basic idea of adversarial estimation is to structure the parameter estimation around two auxiliary models, called the \textit{generator} and the \textit{discriminator}.
-They ``play against each other'' based on a parameter estimate $\hat{\theta_{t}}$ which gets updated iteratively. 
+The basic idea of adversarial estimation is to structure the parameter estimation around two auxiliary models, called the \textit{generator} and the \textit{discriminator} (or \textit{critic}).
 The generator $G(\hat{\theta}) : Z \rightarrow O$ creates simulated data based on a guess of the true parameter value $\hat{\theta}$.
-The discriminator $D_t : O \rightarrow [0 , 1]$ is a classifier that returns the probability of a given observation being real rather than coming from the generator.
-If \text{loss} is some objective function that measures the distance between the fake and real samples, the adversarial estimator solve the problem
- 
+Given the real and the simulated data, the discriminator returns objective function for the generator, which I will call \textit{loss}.
+This loss function can be any divergence or distance between the distributions of the real and simulated data, inlcuding functions that are directy analytically tractable.
+In the classic GAN case involving neural networks, the loss function is the result of the discriminator solving a maximization problem:
+
 \begin{equation}
 \label{eq:adversarial_estimator}
-    \hat{\theta_{adv}} = \underset{\theta \in \Theta}{\arg \min } \max _{D \in \mathcal{D}_n} \text{loss}(D(X_i), D(G(\theta))).
+    \hat{\theta_{adv}} = \underset{\theta \in \Theta}{\arg \min } \max _{D \in \mathcal{D}} \text{loss}(D(X_i, G(\theta))).
 \end{equation}
 
 Note that this game has a clear Nash-Equilibrium
@@ -100,8 +100,10 @@ There, they compare a range of estimators (including neural networks trained to 
 
 Now I discuss some of these terms in detail.
 
-\subsection{Some discriminators}
+\subsection{Examples of discriminators}
 \label{sec:discriminators}
+All the following discriminators have in common that for a data point $x$ they return a probability that it is from the real rather than the simulated data.
+How this probability is then turned into an objective for the generator will be discussed in the next subsection.
 
 Recall the unique Nash equilibrium from \dots.
 If the true densities $p_0$ and $p_\theta(x)$ are known, we get the \textit{oracle discriminator}. %\dots shows that in the unique Nash equilibrium the discriminator assigns each $x$ the probability
@@ -116,13 +118,13 @@ If the true densities $p_0$ and $p_\theta(x)$ are known, we get the \textit{orac
 
 \textcite{kaji2023adversarial} call this the \textit{oracle discriminator}.
 Of course, $p_0$ and $p_\theta(x)$ are unkown in practice.
-Also, this discriminator is only optimal in the Nash equilibrium
+Also, this discriminator is only optimal in the Nash equilibrium %todo add in proposition 1
 as off-equilibrium, it neglects to update from the prior proabilities $p_0$ and $p_\theta(x)$.  %TODO maybe write more about htis
 Nevertheless, it is useful as a benchmark in simulations and has an interesting theoretical property:
 If the simulated sample size $m \rightarrow \infty$, $\theta_{oracle}$ approaches $\theta_{MLE}$. %(why) is this true in the general case?
 
 A simple statistical method for classification is logistic regression.
-Inspired by the simulation study in \textcite{kaji2023adversarial}, I consider a version that regresses on some collection of features of the data points and moments of the data.
+In line with the simulation study in \textcite{kaji2023adversarial}, I consider a version that regresses on some collection of features of the data points and moments of the data.
 
 \begin{definition}[Logistic discriminator]
     Let $\Lambda$ be a sigmoid function with values in $(0,1)$, and $x^{mom}$ an $(i+j)\times k$-matrix of features and moments of the data calculated for each data point.
@@ -136,6 +138,7 @@ Inspired by the simulation study in \textcite{kaji2023adversarial}, I consider a
 
 Note that this classifier has to be calculated anew after each update of $\theta$.
 While this is calculation will usually be fast on modern computers, the same is not necessarily true of the potentially more powerful neural network discriminator.
+Therefore, neural networks are often not trained to completion in practice and we different training procedures might result in different discriminators.
 
 \begin{definition}[Neural network discriminator]
     Define a classifier neural network $\mathcal{N}: \mathcal{X}^k \rightarrow [0, 1]$ by: %TODO, what to call input space and general formalism
@@ -143,34 +146,89 @@ While this is calculation will usually be fast on modern computers, the same is 
         \mathcal{N}(x) = \sigma_L(W_L \sigma_{L-1}(W_{L-1} \cdots \sigma_1(W_1 x + b_1) \cdots + b_{L-1}) + b_L),
     \end{equation}
     where $x \in \mathbb{R}^n$ is the input vector, $L$ is the number of layers, $W_i$ are weight matrices, $b_i$ are bias vectors, $\sigma_i$ are activation functions. %TODO rewrite
-    Assume that this network has been trained at least one step on the classification problem at hand. %TODO wording
+    Let $\theta_{train}$ be a collection of hyperparameters that specify the training of a neural network, such as a loss function, an intial guess, a number of training steps, a training algorithm, and a list of hyperparameters of the latter. %TODO extend/rewrite?
+    Call $\mathcal{N}(\theta_{train})$ the network $\mathcal{N}$ after it has been trained according to $\theta_{train}$.
     Then the \textbf{neural network discriminator} assigns
     \begin{equation}
-        D(x) = \mathcal{N}(x)
+        D(x) = \mathcal{N}(\theta_{train})(x)
     \end{equation}
     to every $x \in$ . %TODO
 \end{definition}
 
-While neural networks are fully defined by their structure, activation functions, weights, and biases, the latter two are the result of their training.
-So to implement the neural net classifier in practice, its training has to be specified, including training algorithm, hyperparameters, and number of training steps.
-\dots
+To understand more deeply the loss landscape which a neural network discriminator builds for the generator, we must consider the loss function on which it is trained.
 
-\subsection{Losses}
+\subsection{Generator objectives}
 \label{sec:losses}
 
-\subsubsection{Cross-entropy loss}
+\subsubsection{Jensen-Shannon divergence}
 \label{sec:ce_loss}
 
-Following \textcite{goodfellow2014generative}, \textcite{kaji2023adversarial} chose to minimize:
+%Following \textcite{goodfellow2014generative}, \textcite{kaji2023adversarial} choose the classical GAN objective.
+The classical way to turn the proabilities $\mathcal{D}(x)$ into an objective for the generator is the following: 
 
-\begin{definition}
-    The empirical cross-entropy loss:
+\begin{definition}[Cross-entropy loss] %TODO not a loss in the sense in which I used the term above!
+    The empirical cross-entropy loss (CE) is:
     $$
     \frac{1}{n} \sum_{i=1}^n \log D\left(X_i\right)+\frac{1}{m} \sum_{i=1}^m \log \left(1-D\left(X_{i, \theta}\right)\right) \text {. }
-    $$
-    
+    $$    
 \end{definition}
 
+A discriminator that maximizes the cross-entropy loss therebay calculates the Jensen-Shannon divergence (plus a constant) for the generator to minimize.
+\begin{theorem}[\cite{goodfellow2014generative}]
+    $\cdots$
+\end{theorem}
+A neural network discriminator that is not trained to completion returns an approximation of the Jensen-Shannon divergence.
+In practice, only such an approximation is often used, for two reasons:
+First, the training a neural network to completion multiple times for every gradient calucation of the generator's optimizer can be very computationally costly,
+especially given that GANs in practice are often large neural networks and are applied to high-dimensional data sets.
+Second, an imprecise estimate of the gradient often still leads to convergence. %TODO theory? experience?
 
-\subsubsection{Wasserstein loss}
+However, even the Jensen-Shannon divergence calculated by an optimal discriminator has a crucial disadvatage:
+The divergence is maximal if $p_G$ and $p_0$ have disjoint support. %TODO...are disjoint? don't overlap
+Therefore, there are regions of the loss landscape where even the optimal CE-discriminator provides a gradient of zero in every direction at every point to the generator.
+If the generator ``ends up'' in such a region or the initial guess is there, algorithm \ref{alg:adversarial_estimation} is unlikely to converge.
+%TODO maybe sth about this being more likely in high-dimensional spaces?
+Luckily, there are $\cdots$
+
+\subsubsection{Wasserstein-p distance}
 \label{sec:wasserstein_loss}
+
+Using the so-called Wasserstein-1 distance as an optimization target for the generator was first proposed by \Textcite{arjovsky2017wassersteingan}.%TODO later published?
+
+\begin{definition}[Wasserstein-p distance]
+    For two probability distribution $\mathbb{P}_0$ and $\mathbb{P}_G$, let $\Pi (\mathbb{P}_0, \mathbb{P}_G)$ be the set of all joint distributions $\gamma(x, y)$ whose marginals are $\mathbb{P}_r and \mathbb{P}_g$.
+    Then for $p \geq 1$,%\in [1, +\infty]$,
+    $$
+    W_p(\mu, \nu) = \inf_{\gamma \in \Gamma(\mu, \nu)} \left(\mathbf{E}_{(x, y) \sim \gamma} d(x, y)^p \right)^{1/p},
+    $$
+    is the Wasserstein-p distance (also Wasserstein p-distance) between $\mathbb{P}_0$ and $\mathbb{P}_G$.
+\end{definition}
+
+A natural interpretation of this equation comes from the field of optimal transport.
+It quantifies how much probability mass has to be moved how far in order to transfer $\mathbb{P}_0$ into $\mathbb{P}_G$, or vice versa, assuming that this transport is done optimally.
+Inspired by this image, the Wasserstein-1 distance is also called \textit{Earth-Mover distance}.
+
+The Wasserstein distances deliver a measure of the distance between two distributions that is strictly monotone even if they are non-overlapping. %TODO wording
+However, since they require a solution to the optimal transport problem, they can be demanding to calculate, especially in high-dimensional spaces. %TODO true?
+In the context of GANs, it is natural to consider approximating it using a neural network.
+To this end, the following fact is helpful:
+
+\begin{theorem}[Kantorovich-Rubinstein duality]
+    \begin{equation}
+        W_{1}\left(\mathbb{P}_0, \mathbb{P}_G\right)=\sup _{\|f\|_L \leq 1} \mathbb{E}_{x \sim \mathbb{P}_0}[f(x)]-\mathbb{E}_{x \sim \mathbb{P}_G}[f(x)]
+    \end{equation}
+\end{theorem}
+
+This dual representation of the Wasserstein-1 distance paves the way to approximating it using a neural network.
+The network estimates the function $f$ and is often called critic instead of discriminator since it does not return a probability anymore.
+Unfortunately, it is not trivial to regularize a neural network to obey the Lipschitz constraint.
+\Textcite{arjovsky2017wassersteingan} clamp the weights of the neural network to lie in a compact space.
+They themselves describe this approach as ``clearly terrible'', since there is no principled way to chose the clipping parameter and setting it too big or too small comes with difficult trade-offs. %TODO rewrite?
+
+\Textcite{gulrajani2017improvedtrainingwassersteingans} propose to penalize the norm of the gradient of the critic with respect to its input.
+This solution has been more widely accepted and is also used by \textcite{athey2021using}.
+%TODO how much theory? def more
+Of course, it is also possible to approximate the Wasserstein-1 distance without training a neural network.
+Since the Wasserstein distance is the solution to an optimal transport problem, it can be derived using a ``Pseudo-auction algorithm''.
+For differentiability, this algorithm can than be approximated using a smoothed ``soft-auction'' algorithm.
+The divergence resulting from this algorithm is called the \textit{Sinkhorn divergence.}
