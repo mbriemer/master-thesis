@@ -15,6 +15,25 @@ class Discriminator_paper(torch.nn.Module): #flat net like in the paper
     def forward(self, x):
         x = self.layers(x)
         return x
+    
+
+class My_old_discriminator (torch.nn.Module): #larger net
+    def __init__(self, input_size=4, output_size=1):
+        super(My_old_discriminator, self).__init__()
+        self.layers = torch.nn.Sequential(
+            torch.nn.Linear(input_size, 64),
+            torch.nn.ReLU(),
+            torch.nn.Linear(64, 256),
+            torch.nn.ReLU(),
+            torch.nn.Linear(256, 16),
+            torch.nn.ReLU(),
+            torch.nn.Linear(16, output_size),
+            torch.nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        return self.layers(x)
+    
 
 def NDD_train(true_samples, fake_samples, discriminator, optimizerD, criterion, n_discriminator = 15):
     for _ in range(n_discriminator):
