@@ -485,5 +485,6 @@ pyrightconfig.json
 *.out
 *.txt
 *.png
+!/latex/1_Content/Images/*.png
 *.npz
 *.pt
