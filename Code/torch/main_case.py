@@ -1,10 +1,13 @@
 """Estimation simulation with Wasserstein"""
 import torch
+from torch.utils.data import RandomSampler
 from geomloss import SamplesLoss
+import scipy.optimize as opt
 import matplotlib.pyplot as plt
 #from tqdm import tqdm
 
-from roy import royinv
+from roy import royinv, royinv_sp
+from other_discriminators import logistic_loss3
 #from NND import Discriminator_paper, generator_loss
 
 class Generator(torch.nn.Module):
@@ -19,19 +22,19 @@ class Generator(torch.nn.Module):
 if torch.cuda.is_available():
     device = torch.device("cuda")
 else:
-    device = torch.device("cpu")
-    #raise Exception("No GPU available")
+    #device = torch.device("cpu")
+    raise Exception("No GPU available")
 print(device)
 
 # Simulation hyperarameters
 n = m = 300
 lambda_ = 0
 g = 1
-S = 10
+S = 100
 
 # Neural net hyperparameters
 n_discriminator = 1000
-n_generator = 5000
+n_generator = 10000
 criterion = torch.nn.BCELoss()
 wasserstein = SamplesLoss("sinkhorn", p=1, blur=0.01) # Approximately Wasserstein-p distance
 
@@ -42,38 +45,89 @@ upper_bounds = torch.tensor([3, 3, 1.5, 1, 2, 2, 1, 1], device=device)
 wide_lower_bounds = torch.tensor([-10, -10, -10, -10, 0, 0, -1, -1], device=device)
 wide_upper_bounds = torch.tensor([10, 10, 10, 10, 10, 10, 1, 1], device=device)
 
+# Observed data and latent noise
+Z = torch.rand(m, 4).to(device)
+X = royinv(Z, true_theta).detach()
+
+""" #Perturb the true parameter values
+theta_0 = true_theta + torch.randn(8, device=device) * 0.1
+theta_0 = torch.clamp(theta_0, lower_bounds, upper_bounds)
+print(f"Inital guess: {theta_0}")
+
+# Pre-estimate with logistic regression
+Z_sp = Z.cpu().numpy()
+X_sp = royinv_sp(Z_sp, true_theta.cpu().numpy())
+AdvL = opt.minimize(lambda theta : logistic_loss3(X_sp, royinv_sp(Z_sp, theta))[0],
+                    x0 = theta_0.cpu().numpy(),
+                    method='Nelder-Mead',
+                    bounds = list(zip(lower_bounds.cpu().numpy(), upper_bounds.cpu().numpy())),
+                    options={'return_all' : True, 'disp' : True, 'adaptive' : True})
+#AdvL = torch.tensor(AdvL.x, device=device)
+AdvL = torch.tensor(AdvL.x, device=device, dtype=true_theta.dtype)
+print(f"Pre-estimation: {AdvL}") """
+
+
+""" #Pre-estimation with the logistic discriminator
+generator = Generator(theta_0, lambda_).to(device)
+optimizerG = torch.optim.Adam(generator.parameters())
+
+for i in range(n_generator):
+    optimizerG.zero_grad()
+    fake_samples = generator.forward(Z.detach())
+    generator_loss = logistic_loss2(X.detach(), fake_samples)[0]
+    generator_loss.backward()
+    optimizerG.step()
+
+AdvL = generator.theta.detach()
+print(f"Initial guess: {theta_0}")
+print(f"Pre-estimation: {AdvL}")
+ """
+
 # Initialize tensors to store parameter values and losses
 all_params = torch.empty(S, 8, n_generator, device=device)
 all_losses = torch.empty(S, n_generator, device=device)
 
-
 # Simulation loop
 for s in range(S):
-    Z = torch.rand(m, 4).to(device)
-    X = royinv(Z, true_theta).detach()
+    try:
+        # Draw bootstrap samples
+        biU = torch.tensor(list(RandomSampler(Z, replacement=True, num_samples=m)), device=device)
+        biX = torch.tensor(list(RandomSampler(X, replacement=True, num_samples=n)), device=device)   
 
-    # Initial guess uniform within the bounds
-    intial_guess = wide_lower_bounds + (wide_upper_bounds - wide_lower_bounds) * torch.rand(8, device=device)
-    #intial_guess = torch.tensor([5., -5., -5., 5., 5., 5., -.5, -.5], device=device)
-    #intial_guess = torch.tensor([2.5, 0.5, 0, -0.5, 0.5, 1.5, -0.9, 0.9], device=device)
-    generator = Generator(intial_guess, lambda_).to(device)
-    optimizerG = torch.optim.Adam(generator.parameters())
-   
-    for i in range(n_generator):
-        optimizerG.zero_grad()
-        fake_samples = generator.forward(Z.detach())  # Detach Z instead of fake_samples
-        generator_loss = wasserstein(X.detach(), fake_samples)
-        all_params[s, :, i] = generator.theta.detach()
-        all_losses[s, i] = generator_loss.item()  # Use .item() instead of .detach()
-        generator_loss.backward()
-        #print(generator.theta.grad)
-        optimizerG.step()
+        bU = Z[biU]
+        bX = X[biX]
+        #print(bU)
+        #print(bX)
+
+        # Initial guess uniform within the bounds
+        intial_guess = wide_lower_bounds + (wide_upper_bounds - wide_lower_bounds) * torch.rand(8, device=device)
+        #intial_guess = torch.tensor([5., -5., -5., 5., 5., 5., -.5, -.5], device=device)
+        #intial_guess = torch.tensor([2.5, 0.5, 0, -0.5, 0.5, 1.5, -0.9, 0.9], device=device)
+        generator = Generator(intial_guess, lambda_).to(device)
+        optimizerG = torch.optim.Adam(generator.parameters())
+
+        for i in range(n_generator):
+            try:
+                optimizerG.zero_grad()
+                fake_samples = generator.forward(bU.detach())  # Detach Z instead of fake_samples
+                generator_loss = wasserstein(bX.detach(), fake_samples)
+                all_params[s, :, i] = generator.theta.detach()
+                all_losses[s, i] = generator_loss.item()  # Use .item() instead of .detach()
+                generator_loss.backward()
+                #print(generator.theta.grad)
+                optimizerG.step()
+            except Exception as e:
+                print(f"Error in repetition {s} in generator step {i}: {e}")
+
+    except Exception as e:
+        print(f"Error in repetition {s}: {e}")
+        continue
 
 # Save results
-torch.save(all_params, 'simres/wide_all_params.pt')
-torch.save(all_losses, 'simres/wide_all_losses.pt')
+torch.save(all_params, 'simres/all_params.pt')
+torch.save(all_losses, 'simres/all_losses.pt')
 
-# Plot parameters
+""" # Plot parameters
 param_names = [
         r'$\mu_1$',
         r'$\mu_2$',
@@ -103,3 +157,4 @@ for i in range(8):
 plt.tight_layout()
 #plt.show()
 plt.savefig('./simres/wide_all_params.png')
+ """
