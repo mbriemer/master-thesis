@@ -6,6 +6,7 @@ from geomloss import SamplesLoss
 
 from roy import royinv
 from NND import Discriminator_paper, My_old_discriminator, generator_loss
+from other_discriminators import logistic_loss2
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
@@ -57,19 +58,22 @@ Z = torch.rand(m, 4).to(device)
 # Synthetic observations
 X = royinv(Z, true_theta)
 
-""" for i in range(len(true_theta)):
+for i in range(len(true_theta)):
     for k in range(K):
         print(f'Parameter {i+1}/{len(true_theta)}, iteration {k+1}/{K}')
         theta = true_theta.clone()
         theta[i] = param_ranges[i][k]  
-        #cD_grid[i, k] = loss(X, royinv(Z, th, smooth=lambda_))
-        NND_grid[i, k] = generator_loss(X, royinv(Z, theta), My_old_discriminator, criterion, n_discriminator, g)
+        cD_grid[i, k] = logistic_loss2(X, royinv(Z, theta))[0]
+        #NND_grid[i, k] = generator_loss(X, royinv(Z, theta), My_old_discriminator, criterion, n_discriminator, g)
         #OracleD_grid[i, k] = OracleD(X, royinv(Z, th), theta, th)
         #LL_grid[i, k] = -np.mean(logroypdf(X, th)) / 2
 
+torch.save(cD_grid, 'simres/cD_grid.pt')
+
 # Plotting
 
-NND_grid = NND_grid.detach().cpu().numpy()
+cD_grid = cD_grid.detach().cpu().numpy()
+#NND_grid = NND_grid.detach().cpu().numpy()
 true_theta = true_theta.cpu().numpy()
 param_ranges = [param_range.cpu().numpy() for param_range in param_ranges]
 lower_bounds = lower_bounds.cpu().numpy()
@@ -83,10 +87,10 @@ axs = axs.flatten()
 for i in range(len(true_theta)):
     ax = axs[i]
 
-    ax.plot(param_ranges[i], NND_grid[i, :], linewidth=1.5, color='blue', label='NN')
-    #ax.plot(param_grid[i, :], cD_grid[i, :], linewidth=1.5, color='red', label='Logistic')
+   # ax.plot(param_ranges[i], NND_grid[i, :], linewidth=1.5, color='blue', label='NN')
+    ax.plot(param_ranges[i], cD_grid[i, :], linewidth=1.5, color='red', label='Logistic')
 
-    ax.axvline(x=true_theta[i], color='r', linestyle='--', label=f'True {param_names[i]}')
+    ax.axvline(x=true_theta[i], color='black', linestyle='--', label=f'True {param_names[i]}')
 
     #max = torch.max([torch.max(NND_grid[i, :]), torch.max(cD_grid[i, :])])
     #min = torch.min([torch.min(NND_grid[i, :]), torch.min(cD_grid[i, :])])
@@ -98,11 +102,11 @@ for i in range(len(true_theta)):
 plt.tight_layout()
 #plt.show()
 plt.savefig('./simres/loss_plots.png')
- """#np.savez('./simres/loss_plots.npz', param_grid=param_grid, cD_grid=cD_grid, NND_grid=NND_grid)
+#np.savez('./simres/loss_plots.npz', param_grid=param_grid, cD_grid=cD_grid, NND_grid=NND_grid)
 
 ### Diagonal loss plots ###
 
-Z = torch.rand(m, 4).to(device)
+""" Z = torch.rand(m, 4).to(device)
 X = royinv(Z, true_theta)
 
 n_diags = 4
@@ -178,7 +182,7 @@ for i in range(4):
     ax.legend(loc='best', frameon=False)
 
 plt.tight_layout()
-plt.savefig('./simres/diagonal_loss_plots.png')
+plt.savefig('./simres/diagonal_loss_plots.png') """
 
 #### Loss plot for beta ###
 
