@@ -151,6 +151,33 @@ The the bottom row, the Wasserstein-1 distance as approximated by the Sinkhorn d
 The left column shows clearly that the Jensen-Shannon divergence becomes constant when ($\mu_1$, $\mu_2$) is small or big enough that the distributions become disjoint, while the Wasserstein-1 distance provides constant gradients.
 The right column plots the diagonal ($\mu_1$, $-\mu_2$): disjointness is also realized in this case for large absolute values of ($\mu_1$, $\mu_2$).
 
-
-
 \subsection{Estimation}
+
+\begin{figure}
+    \includegraphics[width=\textwidth]{./Images/main_case_histograms.png}
+    \caption{Results of 200 bootstrap estimations with Wasserstein-1 loss}
+    \label{fig:wasserstein_bootstrap}
+\end{figure}
+
+\begin{figure}
+    \includegraphics[width=\textwidth]{./Images/wide_uniform_histograms.png}
+    \caption{Results of 200 bootstrap estimations with Wasserstein-1 loss and starting values that are uniform over broad intervals}
+    \label{fig:wasserstein_bootstrap}
+\end{figure}
+
+\begin{table}
+    \centering
+    \begin{tabular}{|l|c|c|c|c|c|c|c|c|}
+    \hline
+    & $\mu_1$ & $\mu_2$ & $\gamma_1$ & $\gamma_2$ & $\sigma_1$ & $\sigma_2$ & $\rho_s$ & $\rho_t$ \\
+    \hline
+    Normal estimates & 1.81 & 1.91 & 0.58 & 0.06 & 0.92 & 1.01 & 0.43 & 0.06 \\
+    & (0.14) & (0.12) & (0.08) & (0.02) & (0.04) & (0.10) & (0.12) & (0.03) \\
+    \hline
+    Wide uniform & -0.97 & -0.74 & -1.31 & -2.36 & 1.78 & 2.05 & -0.10 & -0.05 \\
+    & (4.48) & (4.19) & (4.72) & (4.95) & (1.88) & (1.99) & (0.67) & (0.53) \\
+    \hline
+    \end{tabular}
+    \caption{Parameter estimates for Normal and Wide uniform simulations}
+    \label{tab:parameter_estimates}
+\end{table}
