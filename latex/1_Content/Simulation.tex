@@ -7,15 +7,32 @@ The authors simulate the estimation of the Roy model, a discrete choice model wh
 \label{sec:roy}
 
 The Roy model models a set of agents chosing which sector to work in in each of two time periods.
-At the start of the game, nature determines the wages offered to each agent, by the following formulas:
-In the first time period, each agent $i$ observes the (natural logarithms of the) wages log $w_{i11}$ and log $w_{i12}$ offered to them in the two sectors.
+At the start of the game, nature determines the (natural logarithms of the) wages offered to each agent, by the following formulas:
+\begin{equation} %fix indicator and make new line
+    \text{log} w_{i1s} = \mu_s + \varepsilon_{i1s}
+    \text{log} w_{i2s} = \mu_s + \gamma \mathbb{1} {d_{i1} = s} + \varepsilon_{i2s} %fix indicator
+\end{equation}
+where the noise of the offered wages is distributed as follows:
+\begin{equation}
+    \left[\begin{array}{l}\varepsilon_{i 11} \\ \varepsilon_{i 12} \\ \varepsilon_{i 21} \\ \varepsilon_{i 22}\end{array}\right] \sim N\left(\left[\begin{array}{l}0 \\ 0 \\ 0 \\ 0\end{array}\right],\left[\begin{array}{cccc}\sigma_1^2 & \rho_s \sigma_1 \sigma_2 & \rho_t \sigma_1^2 & \rho_s \rho_t \sigma_1 \sigma_2 \\ \rho_s \sigma_1 \sigma_2 & \sigma_2^2 & \rho_s \rho_t \sigma_1 \sigma_2 & \rho_t \sigma_2^2 \\ \rho_t \sigma_1^2 & \rho_s \rho_t \sigma_1 \sigma_2 & \sigma_1^2 & \rho_s \sigma_1 \sigma_2 \\ \rho_s \rho_t \sigma_1 \sigma_2 & \rho_t \sigma_2^2 & \rho_s \sigma_1 \sigma_2 & \sigma_2^2\end{array}\right]\right).
+\end{equation}
+
+In the first time period, each agent $i$ observes the wages log $w_{i11}$ and log $w_{i12}$ offered to them in the two sectors.
 Knowing their own discount factor $\beta$ and the parameters $\gamma_1$ and $\gamma_2$, they solve the dynamic progamming problem
 and pick a sector for the first period.
-In the second period, they observe the wages log $w_{i21}$ and log $w_{i12}$ and pick a sector. %Formula
+In the second period, they the wages log $w_{i21}$ and log $w_{i12}$ are revealed to them and they pick a sector. %Formula
 
 The researcher observes the realized wages log $w_1$ and log $w_2$ and as well as the corresponding sector choices $d_1, d_2 \in {1, 2}$.
+Broadly speaking, the parameters $\mu_1$, $\mu_2$, and to a lesser degree $\gamma_1$ and $\gamma_2$, are location parameters of the distributions of offered wages,
+while $\sigma_1$, $\sigma_2$, $\rho_s$ and $\rho_t$ determine the shape and corrrelations (shapes of the joint distributions). %TODO check
+
+Note the selection effects resulting from only realized wages being observed.
+In particular, if $\mu_i$ is suffiently below $\mu_j$, sector $i$ will never be picked and $\mu_i$ will not be identified.
+
+If $rho_t = 0$, a likelihood function for observations from the Roy model is available.
 
 \subsection{General simulation structure}
+\label{sec:general_simulation_structure}
 
 First, I reproduce parts of the authors' simulation in the scientific Python stack, more precisely, using the packages numpy, scipy, and scikit-learn (\textcite{harris2020array}, \textcite{2020SciPy-NMeth}, and \textcite{scikit-learn}, respectively).
 My code is available %TODO %on GitHub? %upon request?
@@ -67,7 +84,14 @@ Following simple maximum likelihood estimation with $\theta_0$ as an intial valu
 \end{itemize} 
 They also estimate the Roy model using Indirect Infernce and optimally-weighted SMM, but don't use the results.
 
-In \texttt{main\_case.m},
+\texttt{Main\_case.m} simulates untractable likelihood case
+Therefore, an initial guess $\theta_0$ is drawn similarly algorithm \ref{alg:theta0}, but the first draw is used.
+Logistic regression is then perfomed using $\theta_0$ as an intial value, and the result used to intialized adversarial estimation. %TODO loss 1 and to
+Again, loss-curves for the neural network and logistic discriminator are plotted, including for $\rho_t$.
+To study the properties of the adversarial estimators, \textcite{kaji2023adversarial} then perform the bootstrap, sampling with replacement from the noise and the true observations independently.
+They perform estimation with the logistic discriminator using the previous logistic estimate as initial value.
+The result of this serves as initial value for estimation with the neural network discriminator, as well as for the Indirect Inference and optimally-weighted SMM estimators.
+
 
 %TODO keep writing
 
@@ -75,6 +99,9 @@ In \texttt{main\_case.m},
 \label{sec:Implementation}
 
 \subsubsection{Discriminators}
+
+I reproduce the MLE and oracle discriminator by translating the \texttt{logroypdf.m} function that \textcite{kaji2023adversarial} have provided for the case with $\rho_t$ known to be zero.
+For the logistic regression discriminators, I employ \texttt{sklearn.linear\_model.LogisticRegression}.
 
 The authors' code for the neural network discriminator is in \texttt{NND.m}.
 It uses Matlab's \texttt{patternnet} and \texttt{train}.
@@ -95,12 +122,12 @@ Since these are handled differently in \texttt{MLPClassifier}, I do not translat
 
 My simulations show that these modifications do not significantly alter the shape of the loss curves. %Factcheck, show figure
 
-\subsubsection{Generators}
+\subsubsection{Generator}
 
-For the outer optimization loop that trains the generator, the authors use the third-party \texttt{fminsearchcon} function (\textcite{DErrico2024}).
+For the outer optimization loop that trains the generator, the authors use the third-party \mbox{\texttt{fminsearchcon}} function (\textcite{DErrico2024}).
 This is a wrapper function that adds support for bounds and nonlinear constraints to Matlab's built-in \texttt{fminsearch}, which employs the Nelder-Mead simplex algorithm (\textcite{lagarias1998convergence}) to minimize a function without computing gradients.
 I employ \texttt{scipy.optimize.minimize}, which natively supports the Nelder-Mead algorithm with bounds and nonlinear constraints.
-I set an option to perform a version of the Nelder-Mead algorithm that's adapted to higher-dimensional problems, which shows improved convergence in my simulation. %TODO verify
+I set an option to perform a version of the Nelder-Mead algorithm that's adapted to the dimensionality of the problem (\cite{gao2012implementing}), which shows improved convergence in my simulation. %TODO verify
 
 \subsection{Cross-sections of the loss landscape}
 
@@ -156,13 +183,7 @@ The right column plots the diagonal ($\mu_1$, $-\mu_2$): disjointness is also re
 \begin{figure}
     \includegraphics[width=\textwidth]{./Images/main_case_histograms.png}
     \caption{Results of 200 bootstrap estimations with Wasserstein-1 loss}
-    \label{fig:wasserstein_bootstrap}
-\end{figure}
-
-\begin{figure}
-    \includegraphics[width=\textwidth]{./Images/wide_uniform_histograms.png}
-    \caption{Results of 200 bootstrap estimations with Wasserstein-1 loss and starting values that are uniform over broad intervals}
-    \label{fig:wasserstein_bootstrap}
+    \label{fig:main_case_histrograms}
 \end{figure}
 
 \begin{table}
@@ -171,13 +192,28 @@ The right column plots the diagonal ($\mu_1$, $-\mu_2$): disjointness is also re
     \hline
     & $\mu_1$ & $\mu_2$ & $\gamma_1$ & $\gamma_2$ & $\sigma_1$ & $\sigma_2$ & $\rho_s$ & $\rho_t$ \\
     \hline
-    Normal estimates & 1.81 & 1.91 & 0.58 & 0.06 & 0.92 & 1.01 & 0.43 & 0.06 \\
+    Wasserstein-1-discriminator & 1.81 & 1.91 & 0.58 & 0.06 & 0.92 & 1.01 & 0.43 & 0.06 \\
     & (0.14) & (0.12) & (0.08) & (0.02) & (0.04) & (0.10) & (0.12) & (0.03) \\
     \hline
-    Wide uniform & -0.97 & -0.74 & -1.31 & -2.36 & 1.78 & 2.05 & -0.10 & -0.05 \\
+    Wasserstein-1-discriminator with uniform initialization on wide intervals & -0.97 & -0.74 & -1.31 & -2.36 & 1.78 & 2.05 & -0.10 & -0.05 \\
     & (4.48) & (4.19) & (4.72) & (4.95) & (1.88) & (1.99) & (0.67) & (0.53) \\
     \hline
     \end{tabular}
-    \caption{Parameter estimates for Normal and Wide uniform simulations}
+    \caption{Parameter estimates}
     \label{tab:parameter_estimates}
 \end{table}
+
+I reproduce the simulations in section 3.2.2 of \textcite{kaji2023adversarial} using the approximate Wasserstein-1 estimator implemented in \texttt{geomloss.SamplesLoss} and 200 bottstrap samples.
+The first row of \ref{tab:parameter_estimates} shows the results.
+% mu_1 closer mu_2 closer gamma_1 closer gamma_2 as close as worst, sigma_1 as close as worst sigma_2 closer rho_s as close as worst rho_t middle
+The point estmimates are always at least as close to the true parameter values as those reported in Table I of \cite{kaji2023adversarial}.
+The standard errors are also comparable or tighter except for $\mu_1$ and $\mu_2$.
+
+Figure \ref{fig:main_case_histrograms} visualizes the distribution of estimates.
+
+\begin{figure}
+    \includegraphics[width=\textwidth]{./Images/wide_uniform_histograms.png}
+    \caption{Results of 200 estimations with Wasserstein-1 loss and initial values that are uniform over broad intervals}
+    \label{fig:wide_uniform_histograms}
+\end{figure}
+

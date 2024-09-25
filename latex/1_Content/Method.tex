@@ -146,7 +146,7 @@ Therefore, neural networks are often not trained to completion in practice and w
         \mathcal{N}(x) = \sigma_L(W_L \sigma_{L-1}(W_{L-1} \cdots \sigma_1(W_1 x + b_1) \cdots + b_{L-1}) + b_L),
     \end{equation}
     where $x \in \mathbb{R}^n$ is the input vector, $L$ is the number of layers, $W_i$ are weight matrices, $b_i$ are bias vectors, $\sigma_i$ are activation functions. %TODO rewrite
-    Let $\theta_{train}$ be a collection of hyperparameters that specify the training of a neural network, such as a loss function, an intial guess, a number of training steps, a training algorithm, and a list of hyperparameters of the latter. %TODO extend/rewrite?
+    Let $\theta_{train}$ be a collection of hyperparameters that specify the training of a neural network, such as a loss function, an intial guess, a stopping condition, a training algorithm, and a list of hyperparameters of the latter. %TODO extend/rewrite?
     Call $\mathcal{N}(\theta_{train})$ the network $\mathcal{N}$ after it has been trained according to $\theta_{train}$.
     Then the \textbf{neural network discriminator} assigns
     \begin{equation}
@@ -179,7 +179,7 @@ A discriminator that maximizes the cross-entropy loss thereby calculates the Jen
 \end{theorem}
 A neural network discriminator that is not trained to completion returns an approximation of the Jensen-Shannon divergence.
 In practice, only such an approximation is often used, for two reasons:
-First, the training a neural network to completion multiple times for every gradient calucation of the generator's optimizer can be very computationally costly,
+First, the training a neural network to completion multiple times for every gradient calucation of the generator's optimizer can be very computationally costly, %TODO is it also done like this with torch?
 especially given that GANs in practice are often large neural networks and are applied to high-dimensional data sets.
 Second, an imprecise estimate of the gradient often still leads to convergence. %TODO theory? experience?
 
@@ -233,3 +233,37 @@ Of course, it is also possible to approximate the Wasserstein-1 distance without
 Since the Wasserstein distance is the solution to an optimal transport problem, it can be derived using a ``Pseudo-auction algorithm''.
 For differentiability, this algorithm can than be approximated using a smoothed ``soft-auction'' algorithm.
 The divergence resulting from this algorithm is called the \textit{Sinkhorn divergence.} %TODO divergence???
+
+\subsection{Consistency and convergence}
+\label{sec:consistency_and_convergence}
+
+\textcite{kaji2023adversarial} contains three main theoretical result.
+In line with the focus of their paper, they are stated for the case with the (estimated) Jensen-Shannon distance as a criterion.
+
+\subsubsection{Theorems in \cite{kaji2023adversarial}}
+\label{sec:theorems_paper}
+
+The first states that for some reasonable conditions on the oracle and estimated loss, the adversarial estimator is indeed consistent.
+
+The second states that it convergeges at a rate of $O^{*}_P(n^{-1/2})$ and requires the following assumptions:
+First, that the generator is parametric and well-behaved in the parameters.
+The second condition, that $m$ diverges faster than $n$, can easily be guaranteed by the researcher.
+
+The third assumption has two parts: The first is that the estimted criterion converges to its minimum for the true $\theta$ at rate $o^{*}_P(n^-1)$. %TODO make \theta_0 consistently mean true or initial value
+The second part, which the authors call ``orthogonality'', %why?
+is that the derivative of the estimated loss converges to that of the oracle. %TODO maybe reword
+It can be empirically checked by plotting cross-sections of the loss around the original value, as the authors and I do in the simulation part.
+
+The fourth assumption imposes two requirements to aid identification:
+That the true loss has approximately quadratic curvature near the optimum and that $P_{\theta}$ and $P_{\theta_0}$ overlap.
+
+With the conclusion of this, again requiring Assumptions 2 and 3, and a fifth assumption on the (twice) differentiability of the structural model, 
+\textcite{kaji2023adversarial} arrive at their third theorem.
+It states the asymptotic distribution towards which the adversarial estimator weakly converges.
+
+In fact, assuming correct specification, a corollary states that the generator is efficient. %TODO reword?
+
+
+\subsubsection{Applicability to simulations}
+\label{sec:theoerem_simulation}
+
