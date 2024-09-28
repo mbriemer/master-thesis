@@ -6,11 +6,13 @@ The authors simulate the estimation of the Roy model, a discrete choice model wh
 \subsection{The Roy model}
 \label{sec:roy}
 
-The Roy model models a set of agents chosing which sector to work in in each of two time periods.
+The Roy model models a set of agents choosing which sector to work in in each of two time periods.
 At the start of the game, nature determines the (natural logarithms of the) wages offered to each agent, by the following formulas:
 \begin{equation} %fix indicator and make new line
     \text{log} w_{i1s} = \mu_s + \varepsilon_{i1s}
-    \text{log} w_{i2s} = \mu_s + \gamma \mathbb{1} {d_{i1} = s} + \varepsilon_{i2s} %fix indicator
+\end{equation}
+\begin{equation}
+    \text{log} w_{i2s} = \mu_s + \gamma \mathbb{1}_{d_{i1} = s} + \varepsilon_{i2s}
 \end{equation}
 where the noise of the offered wages is distributed as follows:
 \begin{equation}
@@ -22,31 +24,33 @@ Knowing their own discount factor $\beta$ and the parameters $\gamma_1$ and $\ga
 and pick a sector for the first period.
 In the second period, they the wages log $w_{i21}$ and log $w_{i12}$ are revealed to them and they pick a sector. %Formula
 
-The researcher observes the realized wages log $w_1$ and log $w_2$ and as well as the corresponding sector choices $d_1, d_2 \in {1, 2}$.
+The researcher observes the realized wages log $w_1$ and log $w_2$ as well as the corresponding sector choices $d_1, d_2 \in {1, 2}$.
 Broadly speaking, the parameters $\mu_1$, $\mu_2$, and to a lesser degree $\gamma_1$ and $\gamma_2$, are location parameters of the distributions of offered wages,
-while $\sigma_1$, $\sigma_2$, $\rho_s$ and $\rho_t$ determine the shape and corrrelations (shapes of the joint distributions). %TODO check
+while $\sigma_1$, $\sigma_2$, $\rho_s$ and $\rho_t$ determine the shape and correlations (shapes of the joint distributions). %TODO check
 
 Note the selection effects resulting from only realized wages being observed.
-In particular, if $\mu_i$ is suffiently below $\mu_j$, sector $i$ will never be picked and $\mu_i$ will not be identified.
+In particular, if $\mu_i$ is sufficiently below $\mu_j$, sector $i$ will never be picked and $\mu_i$ will not be identified.
 
-If $rho_t = 0$, a likelihood function for observations from the Roy model is available.
+If $\rho_t = 0$, a likelihood function for observations from the Roy model is available.
 
 \subsection{General simulation structure}
 \label{sec:general_simulation_structure}
 
-First, I reproduce parts of the authors' simulation in the scientific Python stack, more precisely, using the packages numpy, scipy, and scikit-learn (\textcite{harris2020array}, \textcite{2020SciPy-NMeth}, and \textcite{scikit-learn}, respectively).
-My code is available %TODO %on GitHub? %upon request?
+First, I reproduce parts of the authors' simulation in the scientific Python stack, more precisely, using the packages \texttt{numpy}, \texttt{scipy}, and \texttt{scikit-learn} (\textcite{harris2020array}, \textcite{2020SciPy-NMeth}, and \textcite{scikit-learn}, respectively).
 %TODO cite Matlab?
 
-I program another simulation using \texttt{PyTorch} (\cite{Ansel_PyTorch_2_Faster_2024}), a popular and highly developed neural network library for Python.
-Among the advantages of Pytorch is that it offers support for training neural networks on GPUs %TODO which has what precise advantages?
-Additionally, the library \texttt{GeomLoss} (\cite{feydy2019interpolating}) builds on PyTorch. 
-Its \texttt{SampleLoss} function provides the Sinkhorn approximations of the Wasserstein-1 and -2 distances.
+%I program another simulation using \texttt{PyTorch} (\cite{Ansel_PyTorch_2_Faster_2024}), a popular and highly developed neural network library for Python.
+%Among the advantages of Pytorch is that it offers support for training neural networks on GPUs %TODO which has what precise advantages?
+%Additionally, the library \texttt{GeomLoss} (\cite{feydy2019interpolating}) builds on PyTorch. 
+%Its \texttt{SampleLoss} function provides the Sinkhorn approximations of the Wasserstein-1 and -2 distances.
+I implement the Sinkhorn divergence as an approximation of the Wasserstein distance using the \texttt{SampleLoss} function from the \texttt{GeomLoss} (\cite{feydy2019interpolating}) package.
 It is also optimized for running on GPUs by virtue of being built on \texttt{KeOps} (\cite{KeOps}).
+\texttt{GeomLoss} is built on \texttt{PyTorch} (\cite{Ansel_PyTorch_2_Faster_2024}), which I therefore integrate into the scientific Python stack for my simulation.
 %Besides the Wasserstein loss, I also add several other best practices taken from \cite{athey2021using}.
 
 For my scientific Python code, I use the \texttt{mp} module from Python's standard library to parallelize simulation runs on an HPC cluster (cf. \ref{sec:acknowledgement_of_system_use}).
 I generate plots using \texttt{Matplotlib} (\cite{Matplotlib}).
+My code is available somewhere. %TODO %on GitHub? %upon request?
 
 The replication package of \cite{kaji2023adversarial} can be downloaded from the journal website.
 It contains the authors' simulation code, written in Matlab. %TODO cite?
@@ -54,10 +58,10 @@ As the authors state in the readme file, the simulations for the Roy model are c
 They draw on functions in other files to simulate data and calculate losses.
 
 Both main files share a general structure:
-After setting parameters of the simulation itself (e.g. sample sizes, number of simulation runs) and the Roy model, the values of loss functions are calculated along a linear grid and then rendered to created Figures 6 and 8.
+after setting parameters of the simulation itself (for example sample sizes, number of simulation runs) and the Roy model, the values of loss functions are calculated along a linear grid and then rendered to created Figures 6 and 8.
 The grid describes seven- or eight-dimensional ``cross-hairs'', where one parameters is varied while the others remain fixed at the true value.
-Thereafter, real and fake observations are generated and an intial guess in generated.
-Then, the the Roy model is estimated using multiple methods, which are implemented as a constrained minimizations.% of a loss function which in turn calculates the discriminators. %TODO write better
+Thereafter, real and fake observations are generated and an initial guess in generated.
+Then, the Roy model is estimated using multiple methods, which are implemented as constrained minimizations.% of a loss function which in turn calculates the discriminators. %TODO write better
 The constraints are bounds on the parameters of the Roy model, on which the authors do not futher elaborate, but which are likely added for computational efficiency. %TODO true?
 Where necessary, an additional nonlinear constraint enforces that the guesses of the minimizer stay within the support of the Roy model.
 
@@ -75,23 +79,22 @@ Where necessary, an additional nonlinear constraint enforces that the guesses of
 \end{algorithm}
 
 In \texttt{main\_roy.m}, the authors plot cross-sections of the loss landscapes generated by the Oracle and neural network discriminator as well as the loss implied by MLE. %TODO wording
-Then, they generate the intial guess $\theta_0$ using algorithm \ref{alg:theta0}.
-Following simple maximum likelihood estimation with $\theta_0$ as an intial value, they perform adversarial estimation with:
+Then, they generate the initial guess $\theta_0$ using algorithm \ref{alg:theta0}.
+Following simple maximum likelihood estimation with $\theta_0$ as an initial value, they perform adversarial estimation with:
 \begin{itemize}
-    \item the Oracle discriminator, using the result of MLE as intial value
+    \item the Oracle discriminator, using the result of MLE as initial value
     \item the Logistic discriminator, using the result of the previous step as initial value
-    \item the neural network discriminator, again using the result of the Oracle step as intial value
+    \item the neural network discriminator, again using the result of the Oracle step as initial value
 \end{itemize} 
-They also estimate the Roy model using Indirect Infernce and optimally-weighted SMM, but don't use the results.
+They also estimate the Roy model using Indirect Inference and optimally-weighted SMM, but don't use the results.
 
-\texttt{Main\_case.m} simulates untractable likelihood case
+\texttt{Main\_case.m} simulates the untractable likelihood case.
 Therefore, an initial guess $\theta_0$ is drawn similarly algorithm \ref{alg:theta0}, but the first draw is used.
-Logistic regression is then perfomed using $\theta_0$ as an intial value, and the result used to intialized adversarial estimation. %TODO loss 1 and to
+Logistic regression is then perfomed using $\theta_0$ as an initial value, and the result used to initialized adversarial estimation. %TODO loss 1 and to
 Again, loss-curves for the neural network and logistic discriminator are plotted, including for $\rho_t$.
 To study the properties of the adversarial estimators, \textcite{kaji2023adversarial} then perform the bootstrap, sampling with replacement from the noise and the true observations independently.
 They perform estimation with the logistic discriminator using the previous logistic estimate as initial value.
-The result of this serves as initial value for estimation with the neural network discriminator, as well as for the Indirect Inference and optimally-weighted SMM estimators (but don't report the Indirect Inference results in the paper). %TODO check working paper version
-
+The result of this serves as the initial value for estimation with the neural network discriminator, as well as for the Indirect Inference and optimally-weighted SMM estimators (but the authors don't report the Indirect Inference results in the paper). %TODO check working paper version
 
 %TODO keep writing
 
@@ -102,22 +105,22 @@ The result of this serves as initial value for estimation with the neural networ
 \label{sec:initial_values}
 
 As mentioned above, \textcite{kaji2023adversarial} use results of estimation procedures as initial guesses for other estimation procedures.
-This in unproblematic in the sense that an estimator will hopefully converege to the optimum independent of its starting value and therefore the final distribution of estimates should be largely independent of the initializations.
-However, about their Figure 7, they write:``The resulting estimators are comparable with MLE'', referring to the oracle and the neural network discriminators.
-This is unsurprising, perhaps even disappointing, given that the theoretically optimal oracle estimator is initialized with the result of MLE and the neural network estimator with the result of the oracle estimation.
+This is unproblematic in the sense that an estimator will hopefully converege to the optimum independent of its starting value and therefore the final distribution of estimates should be largely independent of the initializations.
+However, about their Figure 7, they write:``The resulting estimators are comparable with MLE'', referring to the Oracle and the neural network discriminators.
+This is unsurprising, perhaps even disappointing, given that the theoretically optimal Oracle estimator is initialized with the result of MLE and the neural network estimator with the result of the Oracle estimation.
 
-This issue is less pronounced for their Figure 9, because the setting of intial values does not involve the impossible-in-practice oracle discriminator.
+This issue is less pronounced for their Figure 9, because the setting of initial values does not involve the impossible-in-practice Oracle discriminator.
 However, it is still not surprsing that the neural network estimators results are ``comparable'' to the logistic estimator with which it is initialized.
 
 In the \texttt{README.pdf} of the replication package, \Textcite{kaji2023adversarial} propose to start adversarial the adversarial esitmation by pre-estimation with a logistic discriminator.
 Their Figures 7, 9, and table I should perhaps rather be seen as indicating neural network adversarial estimation does not bring large improvements after this first step in the Roy model case.
 
 To achieve a proper comparision, I reproduce their choice of initial values in my simulation of the Wasserstein discriminator.
-I will leave out the pre-estimation in my simulation of intial values drawn from wider intervals, because then I'll be interested in the more pure properties of the different criterion functions.
+I will leave out the pre-estimation in my simulation of initial values drawn from wider intervals, because then I'll be interested in the more pure properties of the different criterion functions.
 
 \subsubsection{Discriminators}
 
-I reproduce the MLE and oracle discriminator by translating the \texttt{logroypdf.m} function that \textcite{kaji2023adversarial} have provided for the case with $\rho_t$ known to be zero.
+I reproduce the MLE and Oracle discriminator by translating the \texttt{logroypdf.m} function that \textcite{kaji2023adversarial} have provided for the case with $\rho_t$ known to be zero.
 \textcite{kaji2023adversarial} use two logistic regression discriminators. The first in \texttt{main\_case.m}, is:
 \begin{equation}
     D_{\text{loss1}}(x) : \Lambda(\mathbf{\beta}^{\intercal} \mathbf{x^{mom}}) %TODO make consistent with discriminator definition in Method section
@@ -130,7 +133,7 @@ Therefore, they add the cross-moment between $(\log w_1)$ and $(\log w_2)$ in \t
     D_{\text{loss2}}(x) : \Lambda(\mathbf{\beta}^{\intercal} \mathbf{x^{mom}})
 \end{equation}
 with $\mathbf{\beta} = (\beta_0, \dots, \beta_8)$ and $\mathbf{x^{mom}} = (1, \log w_1, d_1, \log w_2, d_2, (\log w_1)^2, (\log w_2)^2), \log w_1 \cdot \log w_2$.
-For both logistic regression discriminatorss, I employ \texttt{sklearn.linear\_model.LogisticRegression}.
+I employ \texttt{sklearn.linear\_model.LogisticRegression} for both logistic regression discriminators.
 
 The authors' code for the neural network discriminator is in \texttt{NND.m}.
 It uses Matlab's \texttt{patternnet} and \texttt{train}.
@@ -138,7 +141,7 @@ The scientific Python stack comes with limited support for neural networks, but 
 
 Following the authors, I create a net with 1 hidden layer containing 10 nodes, followed by the tanh activation function.
 Inspecting sklearn's source code reveals that a logistic output activation function is automatically set. %TODO verfiy, also that this matches sigmoid
-The authors train their network with a conjugate-gradient descent algorithm.
+The authors train their network with a conjugate gradient descent algorithm.
 Because this is not available to train \texttt{MLPClassifier}, I use the Adam algorithm (\textcite{diederik2014adam}).
 
 \texttt{MLPClassifier}'s default convergence criteria cause my code to raise warnings about non-convergence of the discriminator nets.
@@ -150,7 +153,7 @@ Therefore, I leave the default settings and accept the warnings.
 The authors also set the normalization and regularization parameters of \texttt{patternnet}.
 Since these are handled differently in \texttt{MLPClassifier}, I do not translate this adaption.
 
-Figures \ref{fig:kmp_figure_6} and \ref{fig:kmp_figure_8_sp} in section \ref{sec:cross_loss} suggest that these modifcations do not perceptively alter the the loss landscape.
+Figures \ref{fig:kmp_figure_6} and \ref{fig:kmp_figure_8_sp} in section \ref{sec:cross_loss} suggest that these modifcations do not perceptively alter the loss landscape.
 
 \subsubsection{Generator}
 
@@ -185,32 +188,32 @@ Figures \ref{fig:kmp_figure_6} and \ref{fig:kmp_figure_8_sp} match Figures 6 and
     \label{fig:wide_loss_plots}
 \end{figure}
 
-Figure \ref{fig:wide_loss_plots} shows a variant of \ref{fig:kmp_figure_8_sp} plotted over wider intervals.
-It is striking that for some parameters, the loss is flat when moving to far away from the optimal value.
+Figure \ref{fig:wide_loss_plots} shows a variant of figure \ref{fig:kmp_figure_8_sp} plotted over wider intervals.
+It is striking that for some parameters, the loss is flat when moving too far away from the optimal value.
 Partly, this can be explained by the discrete choice nature of the Roy model.
 Consider for example $\mu_1$.
-If it becomes to small relative to $mu_2$ while $\gamma_1$ and $\gamma_2$ are held constant, the agents stop chosing sector 1.
-Since only their chosen sectors and wages are observed, in such cases there are no observations that help to narrow down the vale of $\mu_1$ (except to bound it from above).
+If it becomes too small relative to $\mu_2$ while $\gamma_1$ and $\gamma_2$ are held constant, the agents stop choosing sector 1.
+Since only their chosen sectors and wages are observed, in such cases there are no observations that help to narrow down the value of $\mu_1$ (except to bound it from above).
 Similar arguments explain the flatness towards the tail of the cross-hairs for all four location parameters $\mu_1$, $\mu_2$, $\gamma_1$, and $\gamma_2$. %TODO verify
 
 \begin{figure}
     \includegraphics[width=\textwidth]{./Images/diagonal_loss_plots CE wasserstein-1.png} %TODO verify how exactly this file was created!
-    \caption{Diagonal loss cross-sections. Rows: Jensen-Shannon divergence, Wasserstein-1. Columns: $(\mu_1, \mu_2)$, $(\mu_1, -\mu_2)$.}
+    \caption{Diagonal loss cross-sections. Rows: Jensen-Shannon divergence, Wasserstein-1. Columns: $\text{diag}_{1,2}$, $\text{diag}_{1,-2}$.}
     \label{fig:diagonal_loss_plots}
 \end{figure}
 
 Recall from section \ref{sec:ce_loss} that there is another reason for the loss-function to become flat,
 at at least for the neural network estimator with cross-entropy loss.
 Namely, the constant Jensen-Shannon divergence for disjoint distributions.
-To isolate the effect, I rotate part of the cross-hairs to look at the loss along the diagonal $\{(\mu_1$, $\mu_2) = (m, m); m \in \mathbb{R}\}$.
+To isolate the effect, I rotate part of the cross-hairs to look at the loss along the diagonal $\text{diag}_{1,2} = \{(\mu_1$, $\mu_2) = (m, m); m \in \mathbb{R}\}$.
 This way, the fake distribution can become disjoint from the real distribution without affecting the agents' choices.
 \footnote{There is a small distortion because $\mu_1 = 1.8 \neq 2.0 = \mu_2$.}
 
 Figure \ref{fig:diagonal_loss_plots} shows the results:
 In the top row, a neural network discriminator approximates the JS divergence.
-The the bottom row, the Wasserstein-1 distance as approximated by the Sinkhorn divergence is plotted.
-The left column shows clearly that the Jensen-Shannon divergence becomes constant when ($\mu_1$, $\mu_2$) is small or big enough that the distributions become disjoint, while the Wasserstein-1 distance provides constant gradients.
-The right column plots the diagonal $\{(\mu_1$, $-\mu_2) = (m, m); m \in \mathbb{R}\}$: disjointness is also realized in this case for large absolute values of ($\mu_1$, $\mu_2$).
+In the bottom row, the Wasserstein-1 distance as approximated by the Sinkhorn divergence is plotted.
+The left column shows clearly that the Jensen-Shannon divergence becomes constant when $m$ is small or big enough that the distributions become disjoint, while the Wasserstein-1 distance provides constant gradients.
+The right column plots the diagonal $\text{diag}_{1,-2} = \{(\mu_1$, $-\mu_2) = (m, m); m \in \mathbb{R}\}$: disjointness is also realized in this case for large values of $m$.
 
 \subsection{Estimation}
 
@@ -222,14 +225,14 @@ The right column plots the diagonal $\{(\mu_1$, $-\mu_2) = (m, m); m \in \mathbb
 
 \begin{table}
     \centering
-    \begin{tabular}{|l|c|c|c|c|c|c|c|c|}
+    \begin{tabular}{|l|cccccccc} %TODO fix layout
     \hline
     & $\mu_1$ & $\mu_2$ & $\gamma_1$ & $\gamma_2$ & $\sigma_1$ & $\sigma_2$ & $\rho_s$ & $\rho_t$ \\
     \hline
     Wasserstein-1-discriminator & 1.81 & 1.91 & 0.58 & 0.06 & 0.92 & 1.01 & 0.43 & 0.06 \\
     & (0.14) & (0.12) & (0.08) & (0.02) & (0.04) & (0.10) & (0.12) & (0.03) \\
     \hline
-    Wasserstein-1-discriminator with uniform initialization on wide intervals & -0.97 & -0.74 & -1.31 & -2.36 & 1.78 & 2.05 & -0.10 & -0.05 \\
+    W1 uniform init & -0.97 & -0.74 & -1.31 & -2.36 & 1.78 & 2.05 & -0.10 & -0.05 \\
     & (4.48) & (4.19) & (4.72) & (4.95) & (1.88) & (1.99) & (0.67) & (0.53) \\
     \hline
     \end{tabular}
@@ -237,7 +240,7 @@ The right column plots the diagonal $\{(\mu_1$, $-\mu_2) = (m, m); m \in \mathbb
     \label{tab:parameter_estimates}
 \end{table}
 
-I reproduce the simulations in section 3.2.2 of \textcite{kaji2023adversarial} using the approximate Wasserstein-1 estimator implemented in \texttt{geomloss.SamplesLoss} and 200 bottstrap samples.
+I reproduce the simulations in section 3.2.2 of \textcite{kaji2023adversarial} using the approximate Wasserstein-1 estimator implemented in \texttt{geomloss.SamplesLoss} and 200 bootstrap samples.
 The first row of \ref{tab:parameter_estimates} shows the results.
 % mu_1 closer mu_2 closer gamma_1 closer gamma_2 as close as worst, sigma_1 as close as worst sigma_2 closer rho_s as close as worst rho_t middle
 The point estmimates are always at least as close to the true parameter values as those reported in Table I of \cite{kaji2023adversarial}.
@@ -251,3 +254,12 @@ Figure \ref{fig:main_case_histrograms} visualizes the distribution of estimates.
     \label{fig:wide_uniform_histograms}
 \end{figure}
 
+The Wasserstein-1 estimator should have an advantage when starting far away from the true value.
+To verify this, I run a simulation that draws initial values over a uniform distribution from a wider set of parameter bounds.
+The results are summarized in the second row of table \ref{tab:parameter_estimates} and plotted in figure \ref{fig:wide_uniform_histograms}.
+The numerical comparision shows that they are much less precise than the pre-estimated estimates.
+However, checking the histograms reveals that the mode of the estimate is clearly distinct close to the true value for the location parameters and the variance.
+There is also a mode, albeit less clear, near the true $\rho_t$, but $\rho_s$ does not get estimated at all.
+In all cases, the distribution of estimates is quite wide, and in some cases, a significant amount is at the bounds of the considered intervals.
+
+Comparision to authors' methods to follow\dots
