@@ -10,25 +10,27 @@
 Consider the problem of estimating the parameters of a structural economic model.
 %TODO Is this a good framing?
 %For $k \in \{1,\dots,K\}$ and $l \in \{1,\dots,L\}$, 
-Let $Z \sim p(Z)$ be a vector of ranodm noise variables, $\Theta$ a parameter space and $\mathcal{X}$ a space of outcomes or observations.
-Then an economic model can be imagined as a function $f$ that maps a draw from the noise $Z$ and a set of parameters $\theta \in \Theta$ to an outcome $X \in \mathcal{X}$:
+Let $Z \sim P(Z)$ be a vector of random noise variables, $\Theta$ a parameter space and $\mathcal{X}$ a space of outcomes or observations.
+Then an economic model can be imagined as a function $f$ that maps a draw from the noise $Z$ and a paramter $\theta \in \Theta$ to an outcome $X \in \mathcal{X}$:
 
 \begin{equation}
     X = f(Z, \theta).
 \end{equation}
 
-$f$ might be quite complicated, in particular and as suggested by the index notation, a system of equations. %TODO k, l
-What makes the estimation \textit{structural} is that $f$ is an implementation of a particular economic model together with the assumption that this model captures the true relationships between economic variables, rather than just their statistical relationships. %TODO maybe rewrite
+$f$ might be quite complicated, in particular a system of equations.
+What makes this equation \textit{structural} is that $f$ is an implementation of a particular economic model together with the assumption that this model captures the true relationships between economic variables, rather than just their statistical relationships. %TODO maybe rewrite
+With $f$ therefore given by the presumed model, and $Z$ noise, the goal is of course to find $\hat{\theta}$, a good estimate of the true parameter $\theta$, given observations $X_1, \dots, X_n$.
 %where $X_k$ is a vector of outcome variables influenced by a vector of noise variables $Z_l$. %via a set of (possibly endogeneous) variables $X_k$.
 %The strength and functional form of the relationships between the variables is defined by a function $f$ and its parameters $\Theta$.
 
-$Z \sim p(Z)$ induces a distribution $p(X_{1, \dots, n}|\theta)$.
+$Z \sim P(Z)$ induces a distribution $p(X_1, \dots, X_n|\theta)$.
 This suggests the standard approach of maximum likelihood estimation, that is, to find $\hat{\theta}$ such that
 
 \begin{equation}
     \hat{\theta}_{MLE} = \underset{\theta\in\Theta}{\operatorname{arg\;max}}\,\text{log} p(X_{1, \dots, n}|\theta).
 \end{equation}
 
+The logarithm here is not strictly necessary; it is, however, usually taken to make the likelihood function more computationally tractable, since it does not affect the position of the maximum.
 However, for some more sophisticated economic models, it is not easy or even possible to give an analytical expression for the likelihood function.
 
 This motivates further approaches, in particular simulation methods, which attempt to infer $\theta$ based on a simulation of the true data.
@@ -38,7 +40,7 @@ Most notable among these is perhaps the simulated method of moments, which perfo
 
 The question naturally arises of how to judge whether the simulated distribution comes sufficiently close to the real distribution.
 This is motivates the idea of introducing a second component that provides ``feedback'' on this question in the form of a criterion function to be minimzed.
-Updating the estimate $\hat{theta}$ to minimize this criterion is the central idea behind adversarial estimation, which I will discuss in more detail in section \ref{sec:adversarial_estimation}.
+Updating the estimate $\hat{\theta}$ to minimize this criterion is the central idea behind adversarial estimation, which I will discuss in more detail in section \ref{sec:adversarial_estimation}.
 
 One idea for defining the criterion is to base it on a classification, more precisely, on the probability that a given data point was drawn from the real data rather from a simulated distribution.
 In machine learning, a popular tool for classification are neural networks, which I introduce next.
@@ -99,51 +101,63 @@ The stopping criterion might be either the convergence of the training algorithm
 \section{Adversarial estimation}
 \label{sec:adversarial_estimation}
 
-The basic idea of adversarial estimation is to structure the parameter estimation around two auxiliary models, called the \textit{generator} and the \textit{discriminator} (or \textit{critic}).
+The basic idea of adversarial estimation is inspired by 
+
+The parameter estimation involves two auxiliary models, called the \textit{generator} and the \textit{discriminator} (or \textit{critic}).
 The generator $G : \Theta \times \mathcal{Z} \rightarrow \mathcal{X}$ creates simulated data based on a guess of the true parameter value $\hat{\theta} \in \Theta$.
-Given the real and the simulated data, the discriminator returns objective function for the generator, which I will call \textit{loss}.
-This loss function can be any divergence or distance between the distributions of the real and simulated data, inlcuding functions that are directy analytically tractable.
-In the classic GAN case involving neural networks, the loss function is the result of the discriminator solving a maximization problem:
+The discriminator $D : \mathcal{X} \rightarrow D \subset \mathbb{R}_{\geq 0}$ returns for each real and generated data point some value.
+This value is then used to construct the value of an objective function for the optimization of the generator, which I will call \textit{criterion} or \textit{loss}.
+This loss function can be any divergence or distance between the distributions of the real and simulated data, inlcuding functions that are directy analytically tractable and do not strictly require a separate discriminator to calculate. %TODO any?
+Assuming however the involvement of a discriminator, the estimation can be viewed as the result of the following minimax game:
 
 \begin{equation}
-\label{eq:adversarial_estimator}
-    \hat{\theta}_{adv} = \underset{\theta \in \Theta}{\arg \min } \max _{D \in \mathcal{D}} \text{loss}(D(X_i, G(\theta, Z))).
+    \label{eq:adversarial_estimator}
+        \hat{\theta}_{adv} = \underset{\theta \in \Theta}{\arg \min } \max _{D \in \mathcal{D}} \text{loss}(D(X_i, G(\theta, Z))).
 \end{equation}
 
-Note that this game has a clear Nash-Equilibrium
+Note that this game has a unique Nash-Equilibrium, where $\hat{\theta} = \theta$ and $D(x) = 0.5 \forall x$.
+The generator has no incentive to deviate, since %TODO why?
+If every data point 
 
-This method is a variant of ``Generative Adversarial Networks'', first proposed by \textcite{goodfellow2014generative} (later published as \textcite{goodfellow2020generative}).
-There, two neural networks take the role of generator and discriminator and instead of estimating a parameter vector, noise is transformed into some output, such as an image.
+
+This method is a variant of \textit{Generative Adversarial Networks} (GAN), first proposed by \textcite{goodfellow2014generative} (later published as \textcite{goodfellow2020generative}).
+There, two neural networks take the role of generator and discriminator. % and instead of estimating a parameter vector, noise is transformed into some output, such as an image.
+In particular, the discriminator is a classifier network that ouputs the probability of a data point being a real rather than simulated observation.
 While GANs achieved great success in image generation and related tasks, %cite?
 they are not directly suitable for structural estimation.
-One reason is that the functional form of the generator network is usually very complex, with nodes being fully connected and activation functions being used.
+One reason is that the functional form of the generator network is usually very complex, with feedforward neural networks often being fully connected and activation functions introducing non-linearities.
 Relatedly, the exact architecture of a neural network is usually not chosen to be economically (or at all) interpretable, but rather as an imprecise ``art'' based on predictive performance.
 Therefore, one essential contribution of \textcite{kaji2023adversarial} is to impose that the generator has the structure of an economic model.
-This model being fully specified by $\theta$ is what makes adversarial estimation meaningful.
-It wouldn't be if $\theta$ were a long list of the weights and biases in a multi-layered neural network.
+This model being fully specified by $\theta$ is what makes adversarial estimation meaningful and the result interpretable.
+They wouldn't be if $\theta$ were a long list of the weights and biases in a multi-layered neural network.
 
 An implementation of \ref{eq:adversarial_estimator} looks, generally, like algorithm \ref{alg:adversarial_estimation}.
 
 \begin{algorithm}
     \caption{Adversarial estimation}
     \label{alg:adversarial_estimation}
-    \begin{algorithmic}
+    \begin{algorithmic}[1]
         \STATE Set necessary hyperparameters and initial values
-        \STATE Sample real observations
+        \STATE Sample real observations $X_i \sim P_0$
+        \STATE Sample noise $Z \sim P_Z$
         %TODO when sample noise?
         \WHILE{Stopping criterion does not hold}
-            \STATE Generate fake observations $\widetilde{X}$ from the current generator
-            \STATE Train the discriminator given the fake observations
-            \STATE Calculate the loss
+            \STATE Generate fake observations from the current generator $\widetilde{X} \sim P_{\theta}$ 
+            \IF{The discriminator requires training:}
+                \STATE Train the discriminator given the fake observations
+            \ENDIF
+            \STATE Calculate the loss $\text{loss}(D(X_i, G(\theta, Z))$
             \STATE Update $\hat{\theta}$ %the generator
         \ENDWHILE
     \end{algorithmic}
 \end{algorithm}
 
+Note that while \textcite{kaji2023adversarial} stress the importance of sampling noise only one time, \textcite{goodfellow2014generative} and \textcite{athey2021using} draw it anew for every training step of the discriminator and generator.
+%TODO: write more on noise?
+
 There are various ways to fill in the details of this algorithm.
 The stopping criterion might be a convergence criterion of the generator's optimization problem, or simply a sufficiently high number of repetitions being reached.
-%TODO when sample noise?
-The discriminator might take various forms, which I discuss below.
+A classification discriminator might take various forms, which I discuss below.
 There are two canonical choices for the loss function, which I discuss afterwards.
 The updates of the generator can be done with a gradient descent algorithm if it is differentiable or at least smooth enough that calculating numerical gradients will not lead an optimizer astray.
 Otherwise, they should be performed with a gradient-free optimization procedure.
@@ -155,13 +169,14 @@ There, they compare a range of estimators (including neural networks trained to 
 
 Now I discuss some of these terms in detail.
 
-\subsection{Examples of discriminators}
+\subsection{Examples of classifier discriminators}
 \label{sec:discriminators}
 All the following discriminators have in common that for a data point $x$ they return a probability that it is from the real rather than the simulated data.
 How this probability is then turned into an objective for the generator will be discussed in the next subsection.
 
-Recall the unique Nash equilibrium from \dots.
-If the true densities $p_0$ and $p_\theta(x)$ are known, we get the \textit{oracle discriminator}. %\dots shows that in the unique Nash equilibrium the discriminator assigns each $x$ the probability
+Recall the game-theoretic view of adversarial estimation.
+If the true densities $p_0$ and $p_\theta(x)$ are known, the discriminator has a best response depending only on these, rahter than on the features of a given data point.
+\textcite{kaji2023adversarial} call the discriminator playing this best response the \textit{oracle discriminator}. %\dots shows that in the unique Nash equilibrium the discriminator assigns each $x$ the probability
 
 \begin{definition}[Oracle discriminator]
     The \textbf{oracle discriminator} assigns
@@ -171,11 +186,10 @@ If the true densities $p_0$ and $p_\theta(x)$ are known, we get the \textit{orac
     to every $x \in$ . %TODO    
 \end{definition}
 
-\textcite{kaji2023adversarial} call this the \textit{oracle discriminator}.
 Of course, $p_0$ and $p_\theta(x)$ are unkown in practice.
-Also, this discriminator is only optimal in the Nash equilibrium %todo add in proposition 1
-as off-equilibrium, it neglects to update from the prior proabilities $p_0$ and $p_\theta(x)$.  %TODO maybe write more about htis
-Nevertheless, it is useful as a benchmark in simulations and has an interesting theoretical property:
+%Also, this discriminator is only optimal in the Nash equilibrium %todo add in proposition 1
+%as off-equilibrium, it neglects to update from the prior proabilities $p_0$ and $p_\theta(x)$.  %TODO maybe write more about htis
+Nevertheless, this discriminator is useful as a benchmark in simulations and has an interesting theoretical property:
 If the simulated sample size $m \rightarrow \infty$, $\theta_{oracle}$ approaches $\theta_{MLE}$. %(why) is this true in the general case?
 
 A simple statistical method for classification is logistic regression.
@@ -242,7 +256,7 @@ Luckily, there are $\cdots$
 \subsubsection{Wasserstein-p distance}
 \label{sec:wasserstein_loss}
 
-Using the so-called Wasserstein-1 distance as an optimization target for the generator was first proposed by \Textcite{arjovsky2017wassersteingan}.%TODO later published?
+Using the so-called Wasserstein-1 distance as criterion for the generator was first proposed by \Textcite{arjovsky2017wassersteingan}.%TODO later published?
 
 \begin{definition}[Wasserstein-p distance]
     For two probability distribution $\mathbb{P}_0$ and $\mathbb{P}_G$, let $\Pi (\mathbb{P}_0, \mathbb{P}_G)$ be the set of all joint distributions $\gamma(x, y)$ whose marginals are $\mathbb{P}_r$ and $\mathbb{P}_g$.
@@ -288,6 +302,10 @@ The divergence resulting from this algorithm is called the \textit{Sinkhorn dive
 
 \textcite{kaji2023adversarial} contains three main theoretical result.
 In line with the focus of their paper, they are stated for the case with the (estimated) Jensen-Shannon distance as a criterion.
+
+\subsubsection{Theorems in \cite{goodfellow2014generative}}
+
+
 
 \subsubsection{Theorems in \cite{kaji2023adversarial}}
 \label{sec:theorems_paper}
