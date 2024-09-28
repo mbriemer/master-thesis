@@ -9,50 +9,105 @@
 
 Consider the problem of estimating the parameters of a structural economic model.
 %TODO Is this a good framing?
-For $k \in \{1,\dots,K\}$, let
+%For $k \in \{1,\dots,K\}$ and $l \in \{1,\dots,L\}$, 
+Let $Z \sim p(Z)$ be a vector of ranodm noise variables, $\Theta$ a parameter space and $\mathcal{X}$ a space of outcomes or observations.
+Then an economic model can be imagined as a function $f$ that maps a draw from the noise $Z$ and a set of parameters $\theta \in \Theta$ to an outcome $X \in \mathcal{X}$:
 
 \begin{equation}
-    Y_k = f_{\Theta}(X_k, Z_k; ),
+    X = f(Z, \theta).
 \end{equation}
 
-where $Y_k$ is a vector of outcome variables influenced by a vector of noise variables $Z_k$. %via a set of (possibly endogeneous) variables $X_k$.
-The strength and functional form of the relationships between the variables is defined by a function $f$ and its parameters $\Theta$.
+$f$ might be quite complicated, in particular and as suggested by the index notation, a system of equations. %TODO k, l
+What makes the estimation \textit{structural} is that $f$ is an implementation of a particular economic model together with the assumption that this model captures the true relationships between economic variables, rather than just their statistical relationships. %TODO maybe rewrite
+%where $X_k$ is a vector of outcome variables influenced by a vector of noise variables $Z_l$. %via a set of (possibly endogeneous) variables $X_k$.
+%The strength and functional form of the relationships between the variables is defined by a function $f$ and its parameters $\Theta$.
 
-A common approach to this problem is maximum likelihood estimation, that is, to find $\hat{\theta}$ such that
+$Z \sim p(Z)$ induces a distribution $p(X_{1, \dots, n}|\theta)$.
+This suggests the standard approach of maximum likelihood estimation, that is, to find $\hat{\theta}$ such that
 
 \begin{equation}
-    \hat{\theta} = \underset{\theta\in\Theta}{\operatorname{arg\;max}}\,\mathcal{L}_{n}(\theta\,;\mathbf{y}) ~.
+    \hat{\theta}_{MLE} = \underset{\theta\in\Theta}{\operatorname{arg\;max}}\,\text{log} p(X_{1, \dots, n}|\theta).
 \end{equation}
 
-However, for some more sophisticated economic models, it is not easy or even possible to calculate the likelihood function.
+However, for some more sophisticated economic models, it is not easy or even possible to give an analytical expression for the likelihood function.
 
-This motivates further approaches, such as simulation methods, which attempts to infer $\theta$ based on a simulation of the true data.
-Most notable among these is perhaps the simulated method of moments.
+This motivates further approaches, in particular simulation methods, which attempt to infer $\theta$ based on a simulation of the true data.
+Most notable among these is perhaps the simulated method of moments, which performs inference based on the moments of the simulated data. %TODO verify
+%TODO more on problems of SMM?
+%TODO indirect inference?
 
 The question naturally arises of how to judge whether the simulated distribution comes sufficiently close to the real distribution.
-This is one motivation for adversarial estimation.
-It is also intuitive that one aproach to this involves classification.
+This is motivates the idea of introducing a second component that provides ``feedback'' on this question in the form of a criterion function to be minimzed.
+Updating the estimate $\hat{theta}$ to minimize this criterion is the central idea behind adversarial estimation, which I will discuss in more detail in section \ref{sec:adversarial_estimation}.
+
+One idea for defining the criterion is to base it on a classification, more precisely, on the probability that a given data point was drawn from the real data rather from a simulated distribution.
 In machine learning, a popular tool for classification are neural networks, which I introduce next.
 
 \subsection{Neural networks}
 \label{sec:neural_networks}
 
-Definition
+A neural network, in the most general sense, is a directed graph that defines how a certain output should be calculated from a given input.
+There are many different structures (also called \textit{architectures}) of that graph.
+This thesis only considers so-called \textit{feed-forward neural networs}, for which the graph consists of:
 
-Training
+\begin{itemize}
+    \item An input layer with one node for each input variable
+    \item An ordered set of hidden layers. The number of nodes in each is chosen by the researcher. The nodes are connected by incoming edges only the the previous and by outgoing edges only to the succesive layer
+    \item An output layer with one node for each output variable
+\end{itemize}
+
+Embedded in any architecture is the fundamental notion of neural networks, which imagines nodes as neurons that calculate inputs and outputs according to their edges.
+
+\begin{definition}[Feed-forward neural network]
+    Let $l = 1, \dots, L$ be an ordered set of layers, with 1 the input and $L$ the output layer.
+    Let $I_l$ be the number of nodes in each layer with $b_{l,1} \dots, b_{l,I_l}$ and $\sigma_{l,1} \dots, \sigma_{l,I_l}$ their biases and activation functions, respectively.
+    Let $J_l$ the number of incoming edges of each layer $l = 2, \cdots, L$, and let each node have at least one 
+    %More precisely, each edge is associated with a weight $w_{l,j}$ and each node in the hidden or ouput layers $v_{l,i}$ with a constant $b_{l,i}$ (called \textit{bias}) and a sigmoid \textit{activation function} $\sigma_{l,i}$.
+    For the nodes in the input layer $v_{1,i}$, set their output equal the inputs.
+    For the nodes $v_{l,i}, l \geq 2$, set:
+
+    \begin{equation}
+        v_{l,i} = \sigma (\sum_{j = 1}^{J_l} w_{l,J} \cdot v_{(l-1),i})
+    \end{equation}
+
+    and interpret the output of the last nodes $v_{L,i}$ as the output of the network.
+
+    Then $\mathcal{N} = (V, E, \Psi)$ is called a neural network
+    with nodes $V$, edges $E$ and $\Psi$ holds the weights, biases and activation functions.% after training according to $\theta_{train}$.
+\end{definition}
+
+Note that if the last layer consist only of one node taking values in $[0,1]$ the network can be interpreted as a classifier suitable to the real-or-fake data problem introduced above.
+
+In practice, neural networks usually used for machine learning applications and their paramters \textit{trained} using a gradient descent or other optimization method.
+In particular, they are sometimes not trained until the optimizer converges, so it is reasonable to include a specification of the training process in the definition.
+
+\begin{definition}[Trained feed-forwared neural network]
+    Let $\theta_{train}$ be a set of hyperparameters specifying the training of a neural network $\mathcal{N}$, inlcuding at least:
+    \begin{itemize}
+        \item A set of initial parameters $\Psi_0$
+        \item A training algorithm A
+        \item A stopping criterion
+    \end{itemize}
+    Then call  $\mathcal{N}(\theta_{train}) = (V, E, \Psi(\theta_{train}))$ a feed-forward neural network trained according to $\theta_{train}$.
+\end{definition}
+
+In practice, $\Psi_0$ is usually chosen randomly
+Note that the training algorithm A might itself require the setting of further hyperparameters.
+So-called \textit{stochastic gradient descent} are the most common training methods, of which Adam (\cite{diederik2014adam}) is the most popular choice. %TODO elaborate?
+The stopping criterion might be either the convergence of the training algorithm, or the a certain number of training steps having been performed.
 
 \section{Adversarial estimation}
 \label{sec:adversarial_estimation}
 
 The basic idea of adversarial estimation is to structure the parameter estimation around two auxiliary models, called the \textit{generator} and the \textit{discriminator} (or \textit{critic}).
-The generator $G(\hat{\theta}) : Z \rightarrow O$ creates simulated data based on a guess of the true parameter value $\hat{\theta}$.
+The generator $G : \Theta \times \mathcal{Z} \rightarrow \mathcal{X}$ creates simulated data based on a guess of the true parameter value $\hat{\theta} \in \Theta$.
 Given the real and the simulated data, the discriminator returns objective function for the generator, which I will call \textit{loss}.
 This loss function can be any divergence or distance between the distributions of the real and simulated data, inlcuding functions that are directy analytically tractable.
 In the classic GAN case involving neural networks, the loss function is the result of the discriminator solving a maximization problem:
 
 \begin{equation}
 \label{eq:adversarial_estimator}
-    \hat{\theta_{adv}} = \underset{\theta \in \Theta}{\arg \min } \max _{D \in \mathcal{D}} \text{loss}(D(X_i, G(\theta))).
+    \hat{\theta}_{adv} = \underset{\theta \in \Theta}{\arg \min } \max _{D \in \mathcal{D}} \text{loss}(D(X_i, G(\theta, Z))).
 \end{equation}
 
 Note that this game has a clear Nash-Equilibrium
@@ -77,7 +132,7 @@ An implementation of \ref{eq:adversarial_estimator} looks, generally, like algor
         \STATE Sample real observations
         %TODO when sample noise?
         \WHILE{Stopping criterion does not hold}
-            \STATE Generate fake observations from the current generator
+            \STATE Generate fake observations $\widetilde{X}$ from the current generator
             \STATE Train the discriminator given the fake observations
             \STATE Calculate the loss
             \STATE Update $\hat{\theta}$ %the generator
@@ -94,7 +149,7 @@ The updates of the generator can be done with a gradient descent algorithm if it
 Otherwise, they should be performed with a gradient-free optimization procedure.
 
 Algorithm 1 in \textcite{kaji2023adversarial} illustrates one way to fill out the details of \ref{alg:adversarial_estimation}.
-They use convergence as a stopping criterion, a (not necessarily trained to completion) neural network discriminator, cross-entropy loss, and update the generator using a version of the popular Adam algorithm (\cite{diederik2014adam}), which requires setting a range of hyperparameters.
+They use convergence as a stopping criterion, a (not necessarily trained to completion) neural network discriminator, cross-entropy loss, and update the generator using a version of the popular Adam (\cite{diederik2014adam}).
 Their simulation code shows another way. %, which I discuss in detail in section \ref{sec:simulation},
 There, they compare a range of estimators (including neural networks trained to completion) and update the generator using a gradient-free approach.
 
@@ -141,13 +196,7 @@ While this calculation will usually be fast on modern computers, the same is not
 Therefore, neural networks are often not trained to completion in practice and we different training procedures might result in different discriminators.
 
 \begin{definition}[Neural network discriminator]
-    Define a classifier neural network $\mathcal{N}: \mathcal{X}^k \rightarrow [0, 1]$ by: %TODO, what to call input space and general formalism
-    \begin{equation} 
-        \mathcal{N}(x) = \sigma_L(W_L \sigma_{L-1}(W_{L-1} \cdots \sigma_1(W_1 x + b_1) \cdots + b_{L-1}) + b_L),
-    \end{equation}
-    where $x \in \mathbb{R}^n$ is the input vector, $L$ is the number of layers, $W_i$ are weight matrices, $b_i$ are bias vectors, $\sigma_i$ are activation functions. %TODO rewrite
-    Let $\theta_{train}$ be a collection of hyperparameters that specify the training of a neural network, such as a loss function, an intial guess, a stopping condition, a training algorithm, and a list of hyperparameters of the latter. %TODO extend/rewrite?
-    Call $\mathcal{N}(\theta_{train})$ the network $\mathcal{N}$ after it has been trained according to $\theta_{train}$.
+    Let $\mathcal{N}(\theta_{train}): \mathcal{X} \rightarrow [0, 1]$ be a classifier neural networked trained according to $\theta_{train}$.
     Then the \textbf{neural network discriminator} assigns
     \begin{equation}
         D(x) = \mathcal{N}(\theta_{train})(x)
@@ -164,7 +213,7 @@ To understand more deeply the loss landscape which a neural network discriminato
 \label{sec:ce_loss}
 
 %Following \textcite{goodfellow2014generative}, \textcite{kaji2023adversarial} choose the classical GAN objective.
-The classical way to turn the proabilities $D(x)$ into an objective for the generator is the following: 
+The classical way to turn the probabilities $D(x)$ into an objective for the generator is the following: 
 
 \begin{definition}[Cross-entropy loss] %TODO not a loss in the sense in which I used the term above!
     The empirical cross-entropy loss (CE) is:
@@ -234,8 +283,8 @@ Since the Wasserstein distance is the solution to an optimal transport problem, 
 For differentiability, this algorithm can than be approximated using a smoothed ``soft-auction'' algorithm.
 The divergence resulting from this algorithm is called the \textit{Sinkhorn divergence.} %TODO divergence???
 
-\subsection{Consistency and convergence}
-\label{sec:consistency_and_convergence}
+\subsection{Theoretical properties}
+\label{sec:theory}
 
 \textcite{kaji2023adversarial} contains three main theoretical result.
 In line with the focus of their paper, they are stated for the case with the (estimated) Jensen-Shannon distance as a criterion.

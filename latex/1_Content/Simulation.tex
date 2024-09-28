@@ -100,6 +100,8 @@ The result of this serves as initial value for estimation with the neural networ
 
 \subsubsection{Discriminators}
 
+\textcite{kaji2023adversarial} use two 
+
 I reproduce the MLE and oracle discriminator by translating the \texttt{logroypdf.m} function that \textcite{kaji2023adversarial} have provided for the case with $\rho_t$ known to be zero.
 For the logistic regression discriminators, I employ \texttt{sklearn.linear\_model.LogisticRegression}.
 
@@ -168,7 +170,7 @@ Similar arguments explain the flatness towards the tail of the cross-hairs for a
 Recall from section \ref{sec:ce_loss} that there is another reason for the loss-function to become flat,
 at at least for the neural network estimator with cross-entropy loss.
 Namely, the constant Jensen-Shannon divergence for disjoint distributions.
-To isolate the effect, I rotate part of the cross-hairs to look at the loss along the diagonal $(\mu_1, \mu_2)$.
+To isolate the effect, I rotate part of the cross-hairs to look at the loss along the diagonal $\{(\mu_1$, $\mu_2) = (m, m); m \in \mathbb{R}\}$.
 This way, the fake distribution can become disjoint from the real distribution without affecting the agents' choices.
 \footnote{There is a small distortion because $\mu_1 = 1.8 \neq 2.0 = \mu_2$.}
 
@@ -176,7 +178,7 @@ Figure \ref{fig:diagonal_loss_plots} shows the results:
 In the top row, a neural network discriminator approximates the JS divergence.
 The the bottom row, the Wasserstein-1 distance as approximated by the Sinkhorn divergence is plotted.
 The left column shows clearly that the Jensen-Shannon divergence becomes constant when ($\mu_1$, $\mu_2$) is small or big enough that the distributions become disjoint, while the Wasserstein-1 distance provides constant gradients.
-The right column plots the diagonal ($\mu_1$, $-\mu_2$): disjointness is also realized in this case for large absolute values of ($\mu_1$, $\mu_2$).
+The right column plots the diagonal $\{(\mu_1$, $-\mu_2) = (m, m); m \in \mathbb{R}\}$: disjointness is also realized in this case for large absolute values of ($\mu_1$, $\mu_2$).
 
 \subsection{Estimation}
 
