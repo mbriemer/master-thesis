@@ -215,6 +215,12 @@ In the bottom row, the Wasserstein-1 distance as approximated by the Sinkhorn di
 The left column shows clearly that the Jensen-Shannon divergence becomes constant when $m$ is small or big enough that the distributions become disjoint, while the Wasserstein-1 distance provides constant gradients.
 The right column plots the diagonal $\text{diag}_{1,-2} = \{(\mu_1$, $-\mu_2) = (m, m); m \in \mathbb{R}\}$: disjointness is also realized in this case for large values of $m$.
 
+\begin{figure}
+    \includegraphics[width=\textwidth]{./Images/loss_plots narrow_crosshairs w1 w2 JS.png} %TODO verify how exactly this file was created!
+    \caption{Loss cross-sections around $\theta_0$: Jensen-Shannon divergence, Wasserstein-1, Wasserstein-2}
+    \label{fig:wasserstein_crosshairs}
+\end{figure}
+
 \subsection{Estimation}
 
 \begin{figure}
@@ -235,6 +241,8 @@ The right column plots the diagonal $\text{diag}_{1,-2} = \{(\mu_1$, $-\mu_2) = 
     W1 uniform init & -0.97 & -0.74 & -1.31 & -2.36 & 1.78 & 2.05 & -0.10 & -0.05 \\
     & (4.48) & (4.19) & (4.72) & (4.95) & (1.88) & (1.99) & (0.67) & (0.53) \\
     \hline
+    W2 uniform init & -0.99 & -0.57 & -1.93 & -1.92 & 1.83 & 1.72 & -0.00 & -0.04 \\
+    & (4.54) & (4.27) & (5.15) & (4.77) & (1.79) & (1.70) & (0.71) & (0.54) \\
     \end{tabular}
     \caption{Parameter estimates}
     \label{tab:parameter_estimates}
@@ -254,6 +262,14 @@ Figure \ref{fig:main_case_histrograms} visualizes the distribution of estimates.
     \label{fig:wide_uniform_histograms}
 \end{figure}
 
+
+
+\begin{figure}
+    \includegraphics[width=\textwidth]{./Images/w2_wide_uniform_histograms.png}
+    \caption{Results of 200 estimations with Wasserstein-2 loss and initial values that are uniform over broad intervals}
+    \label{fig:wide_uniform_histograms}
+\end{figure}
+
 The Wasserstein-1 estimator should have an advantage when starting far away from the true value.
 To verify this, I run a simulation that draws initial values over a uniform distribution from a wider set of parameter bounds.
 The results are summarized in the second row of table \ref{tab:parameter_estimates} and plotted in figure \ref{fig:wide_uniform_histograms}.
@@ -261,5 +277,7 @@ The numerical comparision shows that they are much less precise than the pre-est
 However, checking the histograms reveals that the mode of the estimate is clearly distinct close to the true value for the location parameters and the variance.
 There is also a mode, albeit less clear, near the true $\rho_t$, but $\rho_s$ does not get estimated at all.
 In all cases, the distribution of estimates is quite wide, and in some cases, a significant amount is at the bounds of the considered intervals.
+
+Despite the plausibly superior theoe
 
 Comparision to authors' methods to follow\dots
