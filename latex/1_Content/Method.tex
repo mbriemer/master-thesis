@@ -297,9 +297,6 @@ The divergence resulting from this algorithm is called the \textit{Sinkhorn dive
 \subsection{Theoretical properties}
 \label{sec:theory}
 
-\textcite{kaji2023adversarial} contains three main theoretical results.
-In line with the focus of their paper, they are stated for the case with the (estimated) Jensen-Shannon distance as a criterion.
-
 \subsubsection{Theorems in \cite{goodfellow2014generative}}
 
 
@@ -307,7 +304,25 @@ In line with the focus of their paper, they are stated for the case with the (es
 \subsubsection{Theorems in \cite{kaji2023adversarial}}
 \label{sec:theorems_paper}
 
-The first states that for some reasonable conditions on the true and estimated criterion functions, which discuss below, the adversarial estimator is indeed consistent.
+\textcite{kaji2023adversarial} contains three main theoretical results.
+In line with the focus of their paper, they are stated for the case with the (estimated) Jensen-Shannon distance as a criterion.
+They draw on the literature on M-estimation, particularly as presented in Chapter 3.2 of \textcite{vanderVaart2023}. %TODO cite 1996 edition?
+I begin by laying out some of their notation.
+
+Let $\mathbb{M}_{\theta}(D):=\mathbb{P}_{0} \log D+\mathbb{P}_{\theta} \log (1-D)$ be the sample criterion function, 
+$\mathbb{M}_{\theta}\left(\hat{D}_{\theta}\right)$ the estimated, and 
+$\mathbb{M}_{\theta}\left(D_{\theta}\right)$ the oracle loss.
+
+Let $T_{\theta}(Z_i)$ be a map that represents the generator,
+and endow the parameter space $\Theta$ with a distance $h\left(\theta_{1}, \theta_{2}\right):=\sqrt{\int\left(\sqrt{p_{\theta_{1}}}-\sqrt{p_{\theta_{2}}}\right)^{2}}$.
+
+They take the following symbols from \textcite{vanderVaart2023}:
+
+``$\lesssim$'' means ``is bounded from above up to a universal constant''.
+``$\rightsquigarrow$'' refers to weak convergence, defined in \textcite{vanderVaart2023} as follows:
+
+
+The first theorem states that for some reasonable conditions on the true and estimated criterion functions, which discuss below, the adversarial estimator is indeed consistent.
 
 \begin{theorem}[Theorem 1, KMP]
     \label{th:kmp_1}
@@ -327,7 +342,7 @@ Condition 3 is that the estimated criterion converges uniformly to the true crit
 Condition 4 is that the estimated criterions of estimates $\hat{\theta}$ converge to the estimands $\theta$ at rate 1 in outer probability. %TODO true?
 
 The second theorem states that the estimator converges at a rate of $O^{*}_P(n^{-1/2})$ and requires multiple assumption.
-The first requires, roughly speaking, that the generator is parametric, well-behaved in the parameters, can ``stably'' be inverted, and that the inverted generator is also parametric and well-behaved in the parameters. %TODO think if true %TODO why does this imply parametric?
+The first requires, roughly speaking, that the generator is parametric, that is, he depends smoothly on the parameters, has non-exploding, non-vanishing Fisher information, therefore can be stably inverted, and that the inverted generator is also parametric in this sense. %TODO think if true %TODO why does this imply parametric?
 
 \begin{assumption}[A1, KMP]
     \label{a:1}
@@ -337,20 +352,24 @@ The first requires, roughly speaking, that the generator is parametric, well-beh
         \item The maximum eigenvalue of the Fisher information $I_{\theta}=P_{\theta} \dot{\ell}_{\theta} \dot{\theta}_{\theta}^{\top}$ is bounded uniformly in $\theta \in \Theta$ 
         \item the minimum eigenvalue of $I_{\theta}$ is bounded away from 0 uniformly in $\theta \in \Theta$.
     \end{enumerate}
-    The same is assumed for the "inverted" structural model $\tilde{\mathcal{P}}_{\theta}=\left\{\left(\left(p_{0} / p_{\theta}\right) \circ T_{\theta}\right) p_{Z}: \theta \in \Theta\right\}$.
+    The same is assumed for the ``inverted'' structural model $\widetilde{\mathcal{P}}_{\theta}=\left\{\left(\left(p_{0} / p_{\theta}\right) \circ T_{\theta}\right) p_{Z}: \theta \in \Theta\right\}$.
 \end{assumption}
 
 The second condition is on the growing synthetic sample size, and, barring computational constraints, can easily be guaranteed by the researcher. %TODO compare working paper version
 \begin{assumption}[A2, KMP]
+    \label{a:2}
     $n/m \rightarrow 0$
 \end{assumption}
 
-The third assumption has two parts: The first is that the estimated criterion converges to its minimum for the true $\theta$ at rate $o^{*}_P(n^-1)$. %TODO make \theta_0 consistently mean true or initial value
-The second part, which the authors call ``orthogonality'', %why?
-is that the derivative of the estimated loss converges to that of the oracle. %TODO maybe reword
-It can be empirically checked by plotting cross-sections of the loss around the original value, as the authors and I do in the simulation part.
+The third assumption has two parts: 
+The first is that the estimated criterion converges to its minimum for the true $\theta$ at rate $o^{*}_P(n^-1)$. %TODO make \theta_0 consistently mean true or initial value
+The second part concerns itself with the estimated discriminator's approximation of $\theta$ by $\hat{\theta}$
+and with the oracle discriminator's approximation of $\theta$ by $\hat{\theta}$.
+It imposes that the some of both approximation erros should be bounded by $o^{*}_P(n^-1)$.
+This requirement is called ``orthogonality'', becauses it requires that the total approximation error is a linear combination of these two errors, which are therefore independent.
 
 \begin{assumption}[A3, KMP]
+    \label{a:3}
     There exists a sequence of open balls $G_{n}:=\left\{\theta \in \Theta: h\left(\theta, \theta_{0}\right)<\eta_{n}\right\}$ such that
     \begin{enumerate}
         \item $\eta_{n} \sqrt{n} \rightarrow \infty, \mathbb{M}_{\hat{\theta}}\left(\hat{D}_{\hat{\theta}}\right) \leq$ $\inf _{\theta \in G_{n}} \mathbb{M}_{\theta}\left(\hat{D}_{\theta}\right)+o_{P}^{*}\left(n^{-1}\right)$, and
@@ -358,8 +377,11 @@ It can be empirically checked by plotting cross-sections of the loss around the 
     \end{enumerate}
 \end{assumption}
 
+As noted by KMP, satisfying the second part will involve the derivative of the estimated loss in $\theta$ converging to that of the oracle. %TODO maybe expand, why?
+This can be empirically checked by plotting cross-sections of the loss around the original value, as the authors and I do in the simulation part.
+
 The fourth assumption imposes two requirements to aid identification:
-That the true loss has approximately quadratic curvature near the optimum and that $P_{\theta}$ and $P_{\theta_0}$ overlap.
+That the true loss has approximately quadratic curvature near the optimum and that the true distribution $P_{0}$ and the distribution generated by the true parameter $P_{\theta_0}$ overlap around the optimum.
 
 \begin{assumption}[A4, KMP]
     \label{a:4}
@@ -372,26 +394,29 @@ That the true loss has approximately quadratic curvature near the optimum and th
 Together, these yield:
 \begin{theorem}[Theorem 2, KMP]
 \label{th:kmp_2}
-    Under Assumptions 1 to $4, h\left(\hat{\theta}, \theta_{0}\right)=$ $O_{P}^{*}\left(n^{-1 / 2}\right)$.
+    Under Assumptions 1 to 4, $h\left(\hat{\theta}, \theta_{0}\right)=$ $O_{P}^{*}\left(n^{-1 / 2}\right)$.
 \end{theorem}
 
-Regarding the efficiency of the estimator, consider this fifth assumption, that imposes the twice differentiability of the likelihood of the generator. %TODO maybe expand
+Regarding the efficiency of the estimator, consider this fifth assumption.
+I it is a stronger version of assumption \ref{a:1}, but requires a higher degree of smoothness, namely the twice differentiability of the likelihood of the generator in the parameters and observations.%TODO maybe expand
+Point 3 also implies the quadratic shape of the criterion demanded Assumption \ref{a:4} above. 
 \begin{assumption}[A5, KMP]
 \label{a:5}
     \begin{enumerate}
         \item The parameter space $\Theta$ is (a subset of) a Euclidean space $\mathbb{R}^{k}$. 
         \item The structural model $\left\{P_{\theta}: \theta \in \Theta\right\}$ has a likelihood that is twice differentiable in $\theta$ at $\theta_{0}$ for every $x \in \mathcal{X}$ with the derivatives continuous in both $x$ and $\theta$. 
-        \item The Fisher information matrix $I_{\theta_{0}}:=P_{\theta_{0}} \dot{\ell}_{\theta_{0}} \dot{\ell}_{\theta_{0}}^{\top}=-P_{\theta_{0}} \ddot{e}_{\theta_{0}}$ and the matrix $\tilde{I}_{\theta_{0}}:=2 P_{\theta_{0}}\left(D_{\theta_{0}} \dot{e}_{\theta_{0}} \dot{\ell}_{\theta_{0}}^{\top}+\left(\ddot{\ell}_{\theta_{0}}+\right.\right.$ $\left.\left.\dot{\ell}_{\theta_{0}} \dot{\theta}_{\theta_{0}}^{\top}\right) \log \left(1-D_{\theta_{0}}\right)\right)$ are positive definite. 
+        \item The Fisher information matrix $I_{\theta_{0}}:=P_{\theta_{0}} \dot{\ell}_{\theta_{0}} \dot{\ell}_{\theta_{0}}^{\top}=-P_{\theta_{0}} \ddot{e}_{\theta_{0}}$ is positive definite.
+        \item The matrix $\tilde{I}_{\theta_{0}}:=2 P_{\theta_{0}}\left(D_{\theta_{0}} \dot{e}_{\theta_{0}} \dot{\ell}_{\theta_{0}}^{\top}+\left(\ddot{\ell}_{\theta_{0}}+\right.\right.$ $\left.\left.\dot{\ell}_{\theta_{0}} \dot{\theta}_{\theta_{0}}^{\top}\right) \log \left(1-D_{\theta_{0}}\right)\right)$ is positive definite.
         \item $T_{\theta}$ is continuously differentiable in $\theta$ for every $x \in \mathcal{X}$ and $P_{0}$ has a likelihood that is continuously differentiable in $x$.
     \end{enumerate}
 \end{assumption}
-Point 3 requires a quadratic shape of the criterion, similar to Assumption \ref{a:4} above. 
 
 %With this, Assumptions 2 and 3, and requiring that the conclusion of theorem \ref{th:kmp_2},
 Now \textcite{kaji2023adversarial} arrive at their third theorem.
-It states the asymptotic distribution towards which the adversarial estimator weakly converges.
-
+It states the multinormal distribution towards which the standardized adversarial estimator weakly converges.
+ 
 \begin{theorem}[Theorm 3, KMP]
+    \label{th:kmp_3}
     Under the conclusion of Theorem 2 and Assumptions 2, 3, and 5,
     \begin{equation}
         \sqrt{n}\left(\hat{\theta}-\theta_{0}\right)=2 \tilde{I}_{\theta_{0}}^{-1} \sqrt{n}\left[\mathbb{P}_{0}\left(1-D_{\theta_{0}}\right) \dot{\ell}_{\theta_{0}}-\mathbb{P}_{\theta_{0}} D_{\theta_{0}} \dot{\ell}_{\theta_{0}}-\tilde{\mathbb{P}}_{0} \tau_{n}\right]+o_{P}^{*}(1) \rightsquigarrow N\left(0, \tilde{I}_{\theta_{0}}^{-1} V \tilde{I}_{\theta_{0}}^{-1}\right)
@@ -400,12 +425,13 @@ It states the asymptotic distribution towards which the adversarial estimator we
 \end{theorem}
 
 Efficiency requires correct specification of the generator model.
+This means that for the true parameter $\theta_0$, it simulates the true distribution $P_0$, for which the discriminator has the optimal response to assign probability $1/2$. %TODO check if I understood disciminator correctly.
 
 \begin{assumption}[A6, KMP]
     The synthetic model $\left\{P_{\theta}: \theta \in \Theta\right\}$ is correctly specified, that is, $P_{\theta_{0}}=P_{0}$ and $D_{\theta_{0}} \equiv 1 / 2$.
 \end{assumption}
 
-This yields
+This allows a simplification of theorem \ref{th:kmp_3} to the following efficiency result:
 
 \begin{theorem}[Corollary 4, KMP]
     Under the conclusion of Theorem 3 and Assumption $6, \sqrt{n}\left(\hat{\theta}-\theta_{0}\right)=I_{\theta_{0}}^{-1} \sqrt{n}\left(\mathbb{P}_{0}-\mathbb{P}_{\theta_{0}}\right) \dot{\ell}_{\theta_{0}}+o_{P}^{*}(1) \rightsquigarrow N\left(0, I_{\theta_{0}}^{-1}\right)$.
@@ -418,7 +444,7 @@ This yields
 It seems plausible that the requirements of Theorem \ref{th:kmp_1} are fulfilled by at least one their discriminators, and indeed their results show convergence and amicable loss landscapes.
 The discrete choice nature of the Roy model (which will be introduced below) seems problematic for the results on convergence and efficieny, which depend on the generator. %TOOD: move?
 First, it is not obvious that it can be inverted, as required by Assumption \ref{a:1}.
-Second, because $d_1$ and $d_2$ are (crucial parts) of the observation, the generator is not differentiable and therefore not twice differentiable along $x$, as required by Assumption \ref{a:5}.
+Second, because $d_1$ and $d_2$ are (crucial parts) of the observation, the generator is not differentiable and therefore not twice differentiable along $x$, as required by Assumptions \ref{a:1} and \ref{a:5}.
 
 Regarding my own simulations, of course the unchanged Roy model generator will preserve these difficulties.
 Focusing on the Sinkhorn approximation of the Wasserstein discriminator, it is beyond the scope of this thesis to check whether the results above can be transfered to this case.
