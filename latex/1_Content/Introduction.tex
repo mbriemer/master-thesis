@@ -1,6 +1,21 @@
 \section{Introduction}
 \label{sec:introduction}
 
-This thesis is based on the paper \textcite{kaji2023adversarial} (KMP).
-My presentation on notation largly follow that paper, \textcite{goodfellow2014generative} and, where they relate to the Wasserstein distance, \textcite{arjovsky2017wassersteingan}.
-Another paper un using GANs in Econometrics is \textcite{athey2021using}.
+A saying inspired by \textcite{Box1976} goes:``All models are wrong, but some are useful.''
+If a model is sufficiently useful, structural estimation promises to get some external validity out of it.
+However, there are models for which a likelihood function for the observations they predict is not available.
+This complicates the attempt to estimate them structurally.
+
+\textcite{kaji2023adversarial} (KMP) propose a remedy, which they call ``adversarial estimation''.
+It is inspired by \textit{Generative Adversarial Networks} (GANs), which were introduced to the field of machine learning by \textcite{goodfellow2014generative}.
+So-called Wasserstein GANs, based on the family of Wasserstein distances, were introduced by \textcite{arjovsky2017wassersteingan} to mitigate some shortcomings of GANs.
+As I will demonstrate, replacing part of the classical GAN machinery borrowed from \textcite{goodfellow2014generative} with the Wasserstein distance can also improve the adversarial estimator.
+
+My presentation and notation largly follow the previously mentioned papers.
+Another paper on using GANs in Econometrics is \textcite{athey2021using}.
+
+This thesis is structured as follows.
+Section \ref{sec:background} provides some background on structural estimation and neural networks.
+Section \ref{sec:adversarial_estimation} presents the adversarial estimation approach, discusses variants of it, lays out the theory described in \textcite{kaji2023adversarial}, and checks whether it can be applied to there in my simulation studies.
+Section \ref{sec:simulation} then describes and reports results from my simulation study, which replicates parts of \textcite{kaji2023adversarial}'s study, and shows a case where the Wasserstein distance can improve the adversarial estimator.
+Section \ref{sec:conclusion} concludes.

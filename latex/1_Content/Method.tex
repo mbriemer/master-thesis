@@ -1,15 +1,14 @@
 %\section{Method}
 %\label{sec:method}
 
-\section{Background} %TODO make section?
+\section{Background}
 \label{sec:background}
 
 \subsection{Structural estimation}
 \label{sec:structural_estimation}
 
 Consider the problem of estimating the parameters of a structural economic model.
-%TODO Is this a good framing?
-%For $k \in \{1,\dots,K\}$ and $l \in \{1,\dots,L\}$, 
+%For $k \in \{1,\ldots,K\}$ and $l \in \{1,\ldots,L\}$, 
 Let $Z \sim P(Z)$ be a vector of random noise variables, $\Theta$ a parameter space and $\mathcal{X}$ a space of outcomes or observations.
 Then an economic model can be imagined as a function $f$ that maps a draw from the noise $Z$ and a parameter $\theta \in \Theta$ to an outcome $X \in \mathcal{X}$:
 
@@ -19,108 +18,111 @@ Then an economic model can be imagined as a function $f$ that maps a draw from t
 
 $f$ might be quite complicated, in particular a system of equations.
 What makes this equation \textit{structural} is that $f$ is an implementation of a particular economic model together with the assumption that this model captures the true relationships between economic variables, rather than just their statistical relationships. %TODO maybe rewrite
-With $f$ therefore given by the presumed model, and $Z$ noise, the goal is to find a good estimate $\hat{\theta}$ of the true parameter $\theta$, on the basis of samples $X_1, \dots, X_n$.
+With $f$ therefore given by the presumed model, and $Z$ noise, the goal is to find a good estimate $\hat{\theta}$ of the true parameter $\theta$, on the basis of samples $X_1, \ldots, X_n$.
 %where $X_k$ is a vector of outcome variables influenced by a vector of noise variables $Z_l$. %via a set of (possibly endogeneous) variables $X_k$.
 %The strength and functional form of the relationships between the variables is defined by a function $f$ and its parameters $\Theta$.
 
-$Z \sim P(Z)$ induces a distribution $p(X_1, \dots, X_n|\theta)$.
+$Z \sim P(Z)$ induces a distribution $p(X_1, \ldots, X_n|\theta)$.
 This suggests the standard approach of maximum likelihood estimation, that is, to find $\hat{\theta}$ such that
 
 \begin{equation}
-    \hat{\theta}_{MLE} = \underset{\theta\in\Theta}{\operatorname{\arg \max}}\,\text{log} p(X_{1, \dots, n}|\theta).
+    \hat{\theta}_{MLE} = \underset{\theta\in\Theta}{\operatorname{\arg \max}}\,\text{log} p(X_{1, \ldots, n}|\theta).
 \end{equation}
 
 The logarithm here is not strictly necessary; it is, however, usually taken to make the likelihood function more computationally tractable, since it does not affect the position of the maximum.
 However, for some more sophisticated economic models, it is not easy or even possible to give an analytical expression for the likelihood function.
 
 This motivates further approaches, in particular simulation methods, which attempt to infer $\theta$ based on a simulation of the true data.
+\textit{Simulation} here refers to drawing random samples from the proposed data-generating process given $\hat{\theta}$, an estimate of $\theta$. %TODO kursiv?
 Most notable among these is perhaps the simulated method of moments, which performs inference based on the moments of the simulated data. %TODO verify
 %TODO more on problems of SMM?
 %TODO indirect inference?
 
-The question naturally arises of how to judge whether the simulated distribution comes sufficiently close to the real distribution.
+The question naturally arises of how to judge whether the simulated distribution gets sufficiently close to the real distribution.
 This is motivates the idea of introducing a second component that provides ``feedback'' on this question in the form of a criterion function to be minimized.
 Updating the estimate $\hat{\theta}$ to minimize this criterion is the central idea behind adversarial estimation, which I will discuss in more detail in section \ref{sec:adversarial_estimation}.
 
-One idea for defining the criterion is to base it on a classification, more precisely, on the probability that a given data point was drawn from the real data rather than from a simulated distribution.
+One approach for defining the criterion is to base it on a classification, more precisely, on the probability, as estimated by a classifer, that a given data point was drawn from the real data rather than from a simulated distribution.
 In machine learning, a popular tool for classification are neural networks, which I introduce next.
 
 \subsection{Neural networks}
 \label{sec:neural_networks}
 
-A neural network, in the most general sense, is a directed graph that defines how a certain output should be calculated from a given input.
+A neural network, in the most general sense, is a directed graph that defines how a certain output should be calculated from a given input and is therefore also called \textit{computation graph}.
 There are many different structures (also called \textit{architectures}) of that graph.
-This thesis only considers so-called \textit{feed-forward neural networs}, for which the graph consists of:
+This thesis only considers so-called \textit{feed-forward neural networks}, for which the graph consists of:
 
 \begin{itemize}
-    \item An input layer with one node for each input variable
-    \item An ordered set of hidden layers. The number of nodes in each is chosen by the researcher. The nodes get incoming edges only from the previous and have outgoing edges only to the successive layer
-    \item An output layer with one node for each output variable
+    \item an input layer with one node for each input variable.
+    \item an ordered set of hidden layers. The number of nodes in each is chosen by the researcher. The nodes get incoming edges only from the previous and have outgoing edges only to the successive layer.
+    \item an output layer with one node for each output variable.
 \end{itemize}
 
-Embedded in any architecture is the fundamental notion of neural networks, which imagines nodes as neurons that calculate inputs and outputs according to their edges.
+Embedded in any architecture is the fundamental notion of neural networks, where nodes are imagined as neurons that calculate inputs and outputs according to their edges.
+A a fully connected feed-forward neural network is called \textit{Multi-layer Perceptron}.
 
-\begin{definition}[Feed-forward neural network]
-    Let $l = 1, \dots, L$ be an ordered set of layers, with 1 the input and $L$ the output layer.
-    Let $I_l$ be the number of nodes in each layer with $b_{l,1} \dots, b_{l,I_l}$ and $\sigma_{l,1} \dots, \sigma_{l,I_l}$ their biases and activation functions, respectively.
-    Let $J_l$ be the number of incoming edges of each layer $l = 2, \cdots, L$, and let each node have at least one incoming edge.
+\begin{definition}[Multilayer Perceptron]
+    Let $l = 1, \ldots, L$ be an ordered set of layers, with 1 the input and $L$ the output layer.
+    Let $I_l$ be the number of nodes in each layer with $b_{l,1}, \ldots, b_{l,I_l}$ and $\sigma_{l,1} \ldots, \sigma_{l,I_l}$ their biases and differentiable activation functions, respectively.
+    %Let $J_l$ be the number of incoming edges of each layer $l = 2, \cdots, L$, and let each node have at least one incoming edge.
     %More precisely, each edge is associated with a weight $w_{l,j}$ and each node in the hidden or ouput layers $v_{l,i}$ with a constant $b_{l,i}$ (called \textit{bias}) and a sigmoid \textit{activation function} $\sigma_{l,i}$.
     For the nodes in the input layer $v_{1,i}$, set their output equal the inputs.
     For the nodes $v_{l,i}, l \geq 2$, set:
 
     \begin{equation}
-        v_{l,i} = \sigma (\sum_{j = 1}^{J_l} w_{l,J} \cdot v_{(l-1),i})
+        v_{l,i} = \sigma (b_{l,i} + \sum_{j = 1}^{I_{l-1}} w_{l,J} \cdot v_{(l-1),i})
     \end{equation}
 
     and interpret the output of the last nodes $v_{L,i}$ as the output of the network.
 
-    Then $\mathcal{N} = (V, E, \Psi)$ is called a neural network
-    with nodes $V$, edges $E$ and $\Psi$ holds the weights, biases and activation functions.% after training according to $\theta_{train}$.
+    Then a neural network $\mathcal{N} = (V, E, \psi)$ 
+    with nodes $V$, edges $E$ and a parameter set $\psi$, which holds the weights, biases and activation functions% after training according to $\theta_{\textrm{train}}$.
+    is called a multilayer perceptron.
 \end{definition}
 
-Note that if the last layer consists only of one node taking values in $[0,1]$, the network can be interpreted as a classifier suitable to the real-or-fake data problem introduced above.
+Note that if the last layer consists only of one node taking values in $[0,1]$, the network can be interpreted as a classifier suitable to the real-or-fake-data problem introduced above.
 
 In practice, neural networks mostly are used for machine learning applications and their parameters \textit{trained} using a gradient descent or other optimization method.
-In particular, they are sometimes not trained until the optimizer converges, so it is reasonable to include a specification of the training process in the definition.
+In particular, they are sometimes not trained until the optimization method converges, so it is reasonable to include a specification of the training process in the definition.
 
 \begin{definition}[Trained feed-forward neural network]
-    Let $\theta_{train}$ be a set of hyperparameters specifying the training of a neural network $\mathcal{N}$, including at least:
+    Let $\theta_{\textrm{train}}$ be a set of hyperparameters specifying the training of a neural network $\mathcal{N}$, including at least:
     \begin{itemize}
-        \item A set of initial parameters $\Psi_0$
+        \item A set of initial parameters $\psi_0$
         \item A training algorithm A
         \item A stopping criterion
     \end{itemize}
-    Then call  $\mathcal{N}(\theta_{\text{train}}) = (V, E, \Psi(\theta_{\text{train}}))$ a feed-forward neural network trained according to $\theta_{train}$.
+    Then call  $\mathcal{N}(\theta_{\text{train}}) = (V, E, \psi(\theta_{\text{train}}))$ a feed-forward neural network trained according to $\theta_{\textrm{train}}$.
 \end{definition}
 
-In practice, $\Psi_0$ is usually chosen randomly
+In practice, $\psi_0$ is usually chosen randomly.
 Note that the training algorithm A might itself require the setting of further hyperparameters.
 So-called \textit{stochastic gradient descent} algorithms are the most common training methods, of which Adam (\cite{diederik2014adam}) is the most popular choice. %TODO elaborate?
-The stopping criterion might be either the convergence of the training algorithm, or that a certain number of training steps having been performed.
+The stopping criterion might be either the convergence criterion of the training algorithm, or that a certain number of training steps having been performed.
 
 \section{Adversarial estimation}
 \label{sec:adversarial_estimation}
 
 The basic idea of adversarial estimation is to employ two auxiliary models, called the \textit{generator} and the \textit{discriminator} (or \textit{critic}).
 The generator $G : \Theta \times \mathcal{Z} \rightarrow \mathcal{X}$ creates simulated data based on a guess $\hat{\theta} \in \Theta$ of the true parameter value $\theta_0$.
-The discriminator $D : \mathcal{X} \rightarrow D \subset \mathbb{R}_{\geq 0}$ returns for each real and generated data point some value.
+The discriminator $D : \mathcal{X} \rightarrow  \mathbb{D} \subset \mathbb{R}$ returns for each real and generated data point some value.
 This value is then used to construct the value of an objective function for the optimization of the generator, which I will call \textit{criterion} or \textit{loss}.
-This loss function can be any divergence or distance between the distributions of the real and simulated data, inlcuding functions that are directy analytically tractable and do not strictly require a separate discriminator to calculate. %TODO any?
+This loss function can be any divergence or distance between the distributions of the real and simulated data, including functions that are directly analytically tractable and do not strictly require a separate discriminator to calculate. %TODO any?
 Assuming however the involvement of a discriminator, the estimation can be viewed as the result of the following minimax game:
 
 \begin{equation}
     \label{eq:adversarial_estimator}
-        \hat{\theta}_{adv} = \underset{\theta \in \Theta}{\arg\min}\underset{D\in\mathcal{D}}{\vphantom{g}\max} \text{loss}(D(X_i, G(\theta, Z))).
+        \hat{\theta}_{adv} = \underset{\theta \in \Theta}{\arg\min}\underset{D\in\mathcal{D}}{\vphantom{g}\max} \operatorname{loss}(D(X_i, G(\theta, Z))).
 \end{equation}
 
 Note that this game has a unique Nash-Equilibrium, where $\hat{\theta} = \theta_0$ and $D(x) = 0.5$ for all $x$.
-The generator has no incentive to deviate, since \dots %TODO why?
-If every data point \dots
+%The generator has no incentive to deviate, since \ldots %TODO why?
+%If every data point \ldots
 
 This method is a variant of \textit{Generative Adversarial Networks} (GAN), first proposed by \textcite{goodfellow2014generative} (later published as \textcite{goodfellow2020generative}).
 There, two neural networks take the role of generator and discriminator. % and instead of estimating a parameter vector, noise is transformed into some output, such as an image.
 In particular, the discriminator is a classifier network that outputs the probability of a data point being a real rather than simulated observation.
-While have GANs achieved great success in image generation and related tasks, %cite?
+While GANs have achieved great success in image generation and related tasks, %cite?
 they are not directly suitable for structural estimation.
 One reason is that the functional form of the generator network is usually very complex, with feed-forward neural networks often being fully connected and activation functions introducing non-linearities.
 Relatedly, the exact architecture of a neural network is usually not chosen to be economically (or at all) interpretable, but rather as an imprecise ``art'' based on predictive performance.
@@ -128,22 +130,22 @@ Therefore, one essential contribution of \textcite{kaji2023adversarial} is to im
 This model being fully specified by $\theta$ is what makes adversarial estimation meaningful and the result interpretable.
 They wouldn't be if $\theta$ were a long list of the weights and biases in a multi-layered neural network.
 
-An implementation of \ref{eq:adversarial_estimator} looks, generally, like algorithm \ref{alg:adversarial_estimation}.
+An implementation of (\ref{eq:adversarial_estimator}) looks, generally, like algorithm \ref{alg:adversarial_estimation}.
 
 \begin{algorithm}
     \caption{Adversarial estimation}
     \label{alg:adversarial_estimation}
     \begin{algorithmic}[1]
         \STATE Set necessary hyperparameters and initial values
-        \STATE Sample real observations $X_i \sim P_0$
+        \STATE Sample real observations $X \sim P_0$
         \STATE Sample noise $Z \sim P_Z$
         %TODO when sample noise?
         \WHILE{Stopping criterion does not hold}
-            \STATE Generate fake observations from the current generator $\widetilde{X} \sim P_{\theta}$ 
+            \STATE Generate fake observations from the current generator $\widetilde{X} \sim P_{\hat{\theta}}$ 
             \IF{The discriminator requires training:}
                 \STATE Train the discriminator given the fake observations
             \ENDIF
-            \STATE Calculate the criterion: $\text{loss}(D(X_i, G(\theta, Z))$
+            \STATE Calculate the criterion: $\text{loss}(D(X, G(\hat{\theta}, Z))$
             \STATE Update $\hat{\theta}$ %the generator
         \ENDWHILE
     \end{algorithmic}
@@ -159,28 +161,29 @@ There are two canonical choices for the loss function, which I discuss afterward
 The updates of the generator can be done with a gradient descent algorithm if it is differentiable or at least smooth enough that calculating numerical gradients will not lead an optimizer astray.
 Otherwise, they should be performed with a gradient-free optimization procedure, for example, a simplex algorithm. %TODO: konkretes Beispiel?
 
-Algorithm 1 in \textcite{kaji2023adversarial} illustrates one way to fill out the details of \ref{alg:adversarial_estimation}.
+Algorithm 1 in \textcite{kaji2023adversarial} illustrates one way to fill out the details of algorithm \ref{alg:adversarial_estimation}.
 They use convergence as a stopping criterion, a (not necessarily trained to completion) neural network discriminator, cross-entropy loss, and update the generator using a version of the popular Adam (\cite{diederik2014adam}).
-Their simulation code shows another way. %, which I discuss in detail in section \ref{sec:simulation},
+
+Their simulation code demonstrates another way, which I discuss in detail in section \ref{sec:general_simulation_structure}.
 There, they compare a range of estimators (including neural networks trained to completion) and update the generator using a gradient-free approach.
 
-Now I discuss some of these terms in detail.
+Next I discuss some of these terms in detail.
 
 \subsection{Examples of classifier discriminators}
 \label{sec:discriminators}
-All the following discriminators have in common that for a data point $x$ they return a probability that it is from the real rather than the simulated data.
+All the following discriminators have in common that they are classifiers, so for a data point $x$ they return a probability that it is from the real rather than the simulated data.
 How this probability is then turned into an objective for the generator will be discussed in the next subsection.
 
 Recall the game-theoretic view of adversarial estimation.
-If the true densities $p_0$ and $p_\theta(x)$ are known, the discriminator has a best response depending only on these, rather than on the features of a given data point.
-\textcite{kaji2023adversarial} call the discriminator playing this best response the \textit{oracle discriminator}. %\dots shows that in the unique Nash equilibrium the discriminator assigns each $x$ the probability
+If the true densities $p_0$ and $p_\theta(x)$ are known, the discriminator has a best response depending only on these, rather than on the samples (of real and simulated data).
+\textcite{kaji2023adversarial} call the discriminator playing this best response the \textit{oracle discriminator}. %\ldots shows that in the unique Nash equilibrium the discriminator assigns each $x$ the probability
 
 \begin{definition}[Oracle discriminator]
     The \textbf{oracle discriminator} assigns
     \begin{equation}
         D_\theta(x):=\frac{p_0(x)}{p_0(x)+p_\theta(x)} %TODO delete theta index or copy to others?
     \end{equation}
-    to every $x \in$ . %TODO    
+    to every $x \in \mathcal{X}$ . %TODO    
 \end{definition}
 
 Of course, $p_0$ and $p_\theta(x)$ are unkown in practice.
@@ -193,13 +196,13 @@ A simple statistical method for classification is logistic regression.
 In line with the simulation study in \textcite{kaji2023adversarial}, I consider a version that regresses on some collection of features of the data points and moments of the data.
 
 \begin{definition}[Logistic discriminator]
-    Let $\Lambda$ be a sigmoid function with values in $(0,1)$, and $x^{mom}$ an $(i+j)\times k$-matrix of features and moments of the data calculated for each data point.
-    Let $(\beta_0, \dots,\beta_k \in \mathbb{R}^{k+1})$ be coefficients of a logistic regression run with $x^{mom}$ as a regressor and an output vecor $Y$ consisting of 0s and 1s for the simulated and true observations. %wording
+    Let $\Lambda$ be a sigmoid function with values in $(0,1)$, and $x^{\textrm{mom}}$ an $(i+j)\times k$-matrix of features and moments of the data calculated for each data point.
+    Let $(\beta_0, \ldots,\beta_k \in \mathbb{R}^{k+1})$ be coefficients of a logistic regression run with $x^{\textrm{mom}}$ as a regressor and an output vecor $Y$ consisting of 0s and 1s for the simulated and true observations. %wording
     Then the \textbf{logistic discriminator} assigns
     \begin{equation}
-        D(x) = \Lambda(\beta_{0} + \sum_{k=1}^{K}\beta_{k} x_{k}^{mom}) %TODO can I write x_k^mom like this?
+        D(x) = \Lambda(\beta_{0} + \sum_{k=1}^{K}\beta_{k} x_{k}^{\textrm{mom}}) %TODO can I write x_k^mom like this?
     \end{equation}
-    to every $x \in$ . %TODO
+    to every $x \in \mathcal{X}$ . %TODO
 \end{definition}
 
 Note that this classifier has to be calculated anew after each update of $\theta$.
@@ -207,12 +210,12 @@ While this calculation will usually be fast on modern computers, the same is not
 Therefore, neural networks are often not trained to completion in practice and different training procedures might result in different discriminators.
 
 \begin{definition}[Neural network discriminator]
-    Let $\mathcal{N}(\theta_{train}): \mathcal{X} \rightarrow [0, 1]$ be a classifier neural network trained according to $\theta_{train}$.
+    Let $\mathcal{N}(\theta_{\textrm{train}}): \mathcal{X} \rightarrow [0, 1]$ be a classifier neural network trained according to $\theta_{\textrm{train}}$.
     Then the \textbf{neural network discriminator} assigns
     \begin{equation}
-        D(x) = \mathcal{N}(\theta_{train})(x)
+        D(x) = \mathcal{N}(\theta_{\textrm{train}})(x)
     \end{equation}
-    to every $x \in$ . %TODO
+    to every $x \in \mathcal{X}$ . %TODO
 \end{definition}
 
 To understand more deeply the loss landscape which a neural network discriminator builds for the generator, we must consider the loss function on which it is trained.
@@ -224,19 +227,37 @@ To understand more deeply the loss landscape which a neural network discriminato
 \label{sec:ce_loss}
 
 %Following \textcite{goodfellow2014generative}, \textcite{kaji2023adversarial} choose the classical GAN objective.
-The classical way to turn the probabilities $D(x)$ into an objective for the generator is the following: 
+The classical way to turn the probabilities of a classifier discriminator $D(x)$ into an objective for the generator is the following:
 
 \begin{definition}[Cross-entropy loss] %TODO not a loss in the sense in which I used the term above!
     The empirical cross-entropy loss (CE) is:
     $$
-    \frac{1}{n} \sum_{i=1}^n \log D\left(X_i\right)+\frac{1}{m} \sum_{i=1}^m \log \left(1-D\left(X_{i, \theta}\right)\right) \text {. }
+    \frac{1}{n} \sum_{i=1}^n \log D (X_i)+\frac{1}{m} \sum_{i=1}^m \log (1-D(X_{i, \theta})) \text {. }
     $$    
 \end{definition}
 
+For $X_i\sim p_{0}$ and $X_{i, \theta}\sim p_\theta$ The empirical cross-entropy is an approximation of the following:
+
+\begin{definition}[Population cross-entropy loss]
+    The empirical cross-entropy loss is:
+    $$
+    \mathbb E_{X\sim p_0} \log D(X)+\mathbb E_{X_\theta\sim p_\theta} \log (1-D(X_\theta)) \text {. }
+    $$    
+\end{definition}
+
+%Note that this it not a loss in the sense used above, of being a criterion for the generator.
 A discriminator that maximizes the cross-entropy loss thereby calculates the Jensen-Shannon divergence (plus a constant) for the generator to minimize.
-\begin{theorem}[\cite{goodfellow2014generative}]
-    $\cdots$
+\begin{theorem} \label{thm:global-optimality}
+    If the discriminator is the oracle discriminator $D=D_\theta$, the population cross-entropy loss evaluates as
+    \begin{equation}
+        \mathbb E_{X\sim p_0} \log D(X)+\mathbb E_{X_\theta\sim p_\theta} \log (1-D(X_\theta))
+        = 2\log 2 + 2 \operatorname{JSD}(p_0 \mid p_\theta)
+    \end{equation}
+    where $\operatorname{JSD}$ is the Jensen-Shannon divergence.
 \end{theorem}
+
+The proof for this in contained in the proof for theorem 1 in \textcite{goodfellow2014generative}.
+
 A neural network discriminator that is not trained to completion returns an approximation of the Jensen-Shannon divergence.
 In practice, only such an approximation is often used, for two reasons:
 First, training a neural network to completion multiple times for every gradient calucation of the generator's optimizer can be very computationally costly, %TODO is it also done like this with torch?
@@ -248,7 +269,7 @@ The divergence is maximal if $p_G$ and $p_0$ have disjoint support. %TODO...are 
 Therefore, there are regions of the loss landscape where even the optimal CE-discriminator provides a gradient of zero in every direction at every point to the generator.
 If the generator ``ends up'' in such a region or the initial guess is there, algorithm \ref{alg:adversarial_estimation} is unlikely to converge.
 %TODO maybe sth about this being more likely in high-dimensional spaces?
-Luckily, there are $\cdots$
+%Luckily, there are $\cdots$
 
 \subsubsection{Wasserstein-p distance}
 \label{sec:wasserstein_loss}
@@ -259,7 +280,7 @@ Using the so-called Wasserstein-1 distance as criterion for the generator was fi
     For two probability distributions $\mathbb{P}_0$ and $\mathbb{P}_G$, let $\Pi (\mathbb{P}_0, \mathbb{P}_G)$ be the set of all joint distributions $\gamma(x, y)$ whose marginals are $\mathbb{P}_r$ and $\mathbb{P}_g$.
     Then for $p \geq 1$,%\in [1, +\infty]$,
     $$
-    W_p(\mathbb{P}_0, \mathbb{P}_G) = \inf_{\gamma \in \Gamma(\mathbb{P}_0, \mathbb{P}_G)} \left(\mathbb{E}_{(x, y) \sim \gamma} d(x, y)^p \right)^{1/p}
+    W_p(\mathbb{P}_0, \mathbb{P}_G) = \inf_{\gamma \in \Pi(\mathbb{P}_0, \mathbb{P}_G)} \left(\mathbb{E}_{(x, y) \sim \gamma} d(x, y)^p \right)^{1/p}
     $$
     is the Wasserstein-p distance (also Wasserstein p-distance) between $\mathbb{P}_0$ and $\mathbb{P}_G$.
 \end{definition}
@@ -280,7 +301,7 @@ To this end, the following fact is helpful:
 \end{theorem}
 
 This dual representation of the Wasserstein-1 distance paves the way to approximating it using a neural network.
-The network estimates the function $f$ and is often called critic instead of discriminator since it does not return a probability anymore.
+The network approximates the function $f$ and is often called critic instead of discriminator since it does not return a probability anymore.
 Unfortunately, it is not trivial to regularize a neural network to obey the Lipschitz constraint.
 \Textcite{arjovsky2017wassersteingan} clamp the weights of the neural network to lie in a compact space.
 They themselves describe this approach as ``clearly terrible'', since there is no principled way to chose the clipping parameter and setting it too big or too small comes with difficult trade-offs. %TODO rewrite?
@@ -292,16 +313,12 @@ This solution has been more widely accepted and is also used by \textcite{athey2
 Of course, it is also possible to approximate the Wasserstein-1 distance without training a neural network.
 Since the Wasserstein distance is the solution to an optimal transport problem, it can be derived using a ``Pseudo-auction algorithm''.
 For differentiability, this algorithm can than be approximated using a smoothed ``soft-auction'' algorithm.
-The divergence resulting from this algorithm is called the \textit{Sinkhorn divergence.} %TODO divergence???
+The divergence resulting from this smoothed algorithm is called the \textit{Sinkhorn divergence.} %TODO divergence???
 
 \subsection{Theoretical properties}
 \label{sec:theory}
 
-\subsubsection{Theorems in \cite{goodfellow2014generative}}
-
-
-
-\subsubsection{Theorems in \cite{kaji2023adversarial}}
+\subsubsection{Theorems in KMP}
 \label{sec:theorems_paper}
 
 \textcite{kaji2023adversarial} contains three main theoretical results.
@@ -318,8 +335,8 @@ and endow the parameter space $\Theta$ with a distance $h\left(\theta_{1}, \thet
 
 They take the following symbols from \textcite{vanderVaart2023}:
 
-``$\lesssim$'' means ``is bounded from above up to a universal constant''.
-``$\rightsquigarrow$'' refers to weak convergence, defined in \textcite{vanderVaart2023} as follows:
+The symbold ``$\lesssim$'' means ``is bounded from above up to a universal constant''.
+``$\rightsquigarrow$'' refers to weak convergence.%, defined in \textcite{vanderVaart2023} as follows: %TODO
 
 
 The first theorem states that for some reasonable conditions on the true and estimated criterion functions, which I discuss below, the adversarial estimator is indeed consistent.
@@ -328,7 +345,7 @@ The first theorem states that for some reasonable conditions on the true and est
     \label{th:kmp_1}
     Suppose
     \begin{enumerate}
-        \item For every open $G \in \Theta : inf_{\theta \notin G} \mathbb{M}_{\theta}(D_{\theta}) > \mathbb{M}_{\theta_0}(D_{\theta_0})$,
+        \item For every open $G \in \Theta : \inf_{\theta \notin G} \mathbb{M}_{\theta}(D_{\theta}) > \mathbb{M}_{\theta_0}(D_{\theta_0})$,
         \item $\{ \log D_{\theta} : \theta \in \Theta \}$ and $\{ \log D_{\theta} \circ T_{\theta}: \theta \in \Theta \}$ are $P_0$- and $P_Z$-Glivenko-Cantelli, respectively,
         \item $\sup_{\theta \in \Theta} \| \mathbb{M}_{\theta}(\hat{D}_{\theta}) - \mathbb{M}_{\theta}(D_{\theta}) \| \rightarrow 0$ in probability, and
         \item $\hat{\theta}$ satisfies $\mathbb{M}_{\hat{\theta}}(\hat{D}_{\hat{\theta}}) \leq \inf_{\theta \in \Theta} \mathbb{M}_{\theta}(\hat{D}_{\hat{\theta}}) + o_P^{*}(1) \rightarrow 0$.
@@ -342,7 +359,7 @@ Condition 3 is that the estimated criterion converges uniformly to the true crit
 Condition 4 is that the estimated criterions of estimates $\hat{\theta}$ converge to the estimands $\theta$ at rate 1 in outer probability. %TODO true?
 
 The second theorem gives a rate of convergence for the estimator and requires multiple assumptions.
-The first requires, roughly speaking, that the generator is parametric, that is, he depends smoothly on the parameters, has non-exploding, non-vanishing Fisher information, therefore can be stably inverted, and that the inverted generator is also parametric in this sense. %TODO think if true %TODO why does this imply parametric?
+The first requires, roughly speaking, that the generator is parametric, that is, it depends smoothly on the parameters, has non-exploding, non-vanishing Fisher information, therefore can be stably inverted, and that the inverted generator is also parametric in this sense. %TODO think if true %TODO why does this imply parametric?
 
 \begin{assumption}[A1, KMP]
     \label{a:1}
@@ -362,18 +379,23 @@ The second condition is on the growing synthetic sample size, and, barring compu
 \end{assumption}
 
 The third assumption has two parts: 
-The first is that the estimated criterion converges to its minimum for the true $\theta$ at rate $o^{*}_P(n^-1)$. %TODO make \theta_0 consistently mean true or initial value
-The second part concerns itself with the estimated discriminator's approximation of $\theta$ by $\hat{\theta}$
-and with the oracle discriminator's approximation of $\theta$ by $\hat{\theta}$.
-It imposes that the some of both approximation erros should be bounded by $o^{*}_P(n^-1)$.
-This requirement is called ``orthogonality'', becauses it requires that the total approximation error is a linear combination of these two errors, which are therefore independent.
+The first is that the estimated criterion converges to its minimum for the true $\theta$ at rate $o^{*}_P(n^{-1})$. %TODO make \theta_0 consistently mean true or initial value
+%The second part concerns itself with the estimated discriminator's approximation of $\theta$ by $\hat{\theta}$
+%and with the oracle discriminator's approximation of $\theta$ by $\hat{\theta}$.
+%It imposes that the sum of both approximation errors should be bounded by $o^{*}_P(n^{-1})$.
+The second part concerns itself with the estimation error of the excess oracle loss of $\hat{\theta}$ over $\theta$. 
+This estimation error is the difference between the excess loss under the estimated discriminator and the excess loss under the oracle discriminator, where the former is an estimate for the latter. 
+Therefore, this condition imposes that the infimum over possible values of the true parameter vector $\theta$ of the estimation error should be bounded by $o_P^{\ast}(n^{-1})$
+%The infimum is used, rather than the supremum, since we are interested in a bound on the underestimation, rather than overestimation, of the excess oracle loss, since underestimation could lead to $\hat{\theta}$ being preferred over $\theta$.
+
+%This requirement is called ``orthogonality'' becauses it requires that the total approximation error is a linear combination of these two errors, which are therefore independent.
 
 \begin{assumption}[A3, KMP]
     \label{a:3}
     There exists a sequence of open balls $G_{n}:=\left\{\theta \in \Theta: h\left(\theta, \theta_{0}\right)<\eta_{n}\right\}$ such that
     \begin{enumerate}
         \item $\eta_{n} \sqrt{n} \rightarrow \infty, \mathbb{M}_{\hat{\theta}}\left(\hat{D}_{\hat{\theta}}\right) \leq$ $\inf _{\theta \in G_{n}} \mathbb{M}_{\theta}\left(\hat{D}_{\theta}\right)+o_{P}^{*}\left(n^{-1}\right)$, and
-        \item $\inf _{\theta \in G_{n}}\left[\mathbb{M}_{\hat{\theta}}\left(\hat{D}_{\hat{\theta}}\right)-\mathbb{M}_{\theta}\left(\hat{D}_{\theta}\right)\right]-\left[\mathbb{M}_{\hat{\theta}}\left(D_{\hat{\theta}}\right)-\mathbb{M}_{\theta}\left(D_{\theta}\right)\right]=$ $o_{P}^{*}\left(n^{-1}\right)$..
+        \item $\inf _{\theta \in G_{n}}\left[\mathbb{M}_{\hat{\theta}}\left(\hat{D}_{\hat{\theta}}\right)-\mathbb{M}_{\theta}\left(\hat{D}_{\theta}\right)\right]-\left[\mathbb{M}_{\hat{\theta}}\left(D_{\hat{\theta}}\right)-\mathbb{M}_{\theta}\left(D_{\theta}\right)\right]=$ $o_{P}^{*}\left(n^{-1}\right)$.
     \end{enumerate}
 \end{assumption}
 
@@ -386,7 +408,7 @@ That the true loss has approximately quadratic curvature near the optimum and th
 \begin{assumption}[A4, KMP]
     \label{a:4}
     \begin{enumerate}
-        \item There exists open $G \subset \Theta \subset \mathbb{R}^{k}$ containing $\theta_{0}$ in which $\mathbb{M}_{\theta}\left(D_{\theta}\right)-\mathbb{M}_{\theta_{0}}\left(D_{\theta_{0}}\right) \gtrsim h\left(\theta, \theta_{0}\right)^{2}$. 
+        \item There exists an open set $G \subset \Theta \subset \mathbb{R}^{k}$ containing $\theta_{0}$ in which $\mathbb{M}_{\theta}\left(D_{\theta}\right)-\mathbb{M}_{\theta_{0}}\left(D_{\theta_{0}}\right) \gtrsim h\left(\theta, \theta_{0}\right)^{2}$. 
         \item $h\left(\theta, \theta_{0}\right)^{2}=O\left(\int D_{\theta_{0}}\left(\sqrt{p_{\theta_{0}}}-\sqrt{p_{\theta}}\right)^{2}\right)$ as $\theta \rightarrow \theta_{0}$.
     \end{enumerate}
 \end{assumption}
@@ -398,8 +420,8 @@ Together, these yield:
 \end{theorem}
 
 Regarding the efficiency of the estimator, consider this fifth assumption.
-I it is a stronger version of assumption \ref{a:1}, but requires a higher degree of smoothness, namely the twice differentiability of the likelihood of the generator in the parameters and observations.%TODO maybe expand
-Point 3 also implies the quadratic shape of the criterion demanded Assumption \ref{a:4} above. 
+It is a stronger version of assumption \ref{a:1}, but requires a higher degree of smoothness, namely the twice differentiability of the likelihood of the generator in the parameters and observations.%TODO maybe expand
+The third condition also implies the quadratic shape of the criterion, as demanded by assumption \ref{a:4} above. 
 \begin{assumption}[A5, KMP]
 \label{a:5}
     \begin{enumerate}
@@ -441,13 +463,13 @@ This allows a simplification of theorem \ref{th:kmp_3} to the following efficien
 \label{sec:theoerem_simulation}
 
 \textcite{kaji2023adversarial} partially discuss the applicability of the theoretical results to their simulation study.
-It seems plausible that the requirements of Theorem \ref{th:kmp_1} are fulfilled by at least one their discriminators, and indeed their results show convergence and amicable loss landscapes.
+It seems plausible that the requirements of theorem \ref{th:kmp_1} are fulfilled by at least one their discriminators, and indeed their results show convergence and amicable loss landscapes.
 The discrete choice nature of the Roy model (which will be introduced below) seems problematic for the results on convergence and efficiency, which depend on the generator. %TOOD: move?
-First, it is not obvious that it can be inverted, as required by Assumption \ref{a:1}.
-Second, because $d_1$ and $d_2$ are (crucial parts) of the observation, the generator is not differentiable and therefore not twice differentiable along $x$, as required by Assumptions \ref{a:1} and \ref{a:5}.
+First, it is not obvious that it can be inverted, as required by assumption \ref{a:1}.
+Second, because $d_1$ and $d_2$ are (crucial) parts of the observation, the generator is not differentiable and therefore not twice differentiable along $x$, as required by Assumptions \ref{a:1} and \ref{a:5}.
 
 Regarding my own simulations, of course the unchanged Roy model generator will preserve these difficulties.
 Focusing on the Sinkhorn approximation of the Wasserstein discriminator, it is beyond the scope of this thesis to check whether the results above can be transferred to this case.
 However, consider the simple example of learning only a location parameter.
-The population Wasserstein-1 distance will not show quadratic curvature near the optimum, violating Assumptions \ref{a:4} and \ref{a:5}. %TODO check
+The population Wasserstein-1 distance will not show quadratic curvature near the optimum, violating assumptions \ref{a:4} and \ref{a:5}. %TODO check
 Therefore, the Wasserstein-2 loss seems more promising to uphold the theoretical results.

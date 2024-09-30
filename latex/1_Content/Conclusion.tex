@@ -1,4 +1,14 @@
 \section{Conclusion}
 \label{sec:conclusion}
 
-This section concludes.
+I have argued and demonstrated in the simulation study that the Wasserstein distances (and their approximation by the Sinkhorn divergences) can improve the adversarial estimator.
+The central reason for this is that the Wasserstein distances provide non-flat gradients to the optimizer of the generating model in situations where the Jensen-Shannon divergence fails.
+In practice, the Sinkhorn approximation implemented by \textcite{feydy2019interpolating} can also be calculated quickly if a GPU is available.
+In my simulation study, it was much faster than training a neural network to get the Jensen-Shannon divergence.
+While the central idea of \textcite{kaji2023adversarial} was to take \textcite{goodfellow2014generative} and replace the generator network with a structural economic model,
+\textcite{feydy2019interpolating} have allowed me to also replace the discriminator network with a faster approximation.
+
+One clear direction for future work is to investigate the theoretical properties of the Wasserstein/Sinkhorn adversarial estimators.
+A more open ended direction is however to keep an eye on the continuing developments in machine learning and artificial intelligence.
+Perhaps they will continue to be, like the GAN, which was published 10 years ago, ``useful models'' that inspire econometric research,
+even if there are no (black-box) neural networks left at the end.
