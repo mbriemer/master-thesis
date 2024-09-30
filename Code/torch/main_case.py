@@ -4,9 +4,9 @@ from torch.utils.data import RandomSampler
 from geomloss import SamplesLoss
 import scipy.optimize as opt
 import matplotlib.pyplot as plt
-#from tqdm import tqdm
+from tqdm import tqdm
 
-from roy import royinv, royinv_sp
+from roy import royinv, soft_royinv, royinv_sp
 from other_discriminators import logistic_loss3
 #from NND import Discriminator_paper, generator_loss
 
@@ -17,25 +17,25 @@ class Generator(torch.nn.Module):
         self.lambda_ = lambda_
 
     def forward(self, noise):
-        return royinv(noise, self.theta, lambda_=self.lambda_)
+        return royinv(noise, self.theta, self.lambda_)
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
 else:
-    #device = torch.device("cpu")
-    raise Exception("No GPU available")
+    device = torch.device("cpu")
+    #raise Exception("No GPU available")
 print(device)
 
 # Simulation hyperarameters
 n = m = 300
-lambda_ = 0
+lambda_ = torch.tensor(0.3, device=device)
 g = 1
-S = 100
+S = 40
 
 # Neural net hyperparameters
-n_discriminator = 1000
-n_generator = 10000
-criterion = torch.nn.BCELoss()
+#n_discriminator = 1000
+n_generator = 6000
+#criterion = torch.nn.BCELoss()
 wasserstein = SamplesLoss("sinkhorn", p=1, blur=0.01) # Approximately Wasserstein-p distance
 
 # True parameter values and bounds
@@ -47,9 +47,9 @@ wide_upper_bounds = torch.tensor([10, 10, 10, 10, 10, 10, 1, 1], device=device)
 
 # Observed data and latent noise
 Z = torch.rand(m, 4).to(device)
-X = royinv(Z, true_theta).detach()
+X = royinv(Z, true_theta, lambda_=lambda_).detach()
 
-""" #Perturb the true parameter values
+#Perturb the true parameter values
 theta_0 = true_theta + torch.randn(8, device=device) * 0.1
 theta_0 = torch.clamp(theta_0, lower_bounds, upper_bounds)
 print(f"Inital guess: {theta_0}")
@@ -57,14 +57,14 @@ print(f"Inital guess: {theta_0}")
 # Pre-estimate with logistic regression
 Z_sp = Z.cpu().numpy()
 X_sp = royinv_sp(Z_sp, true_theta.cpu().numpy())
-AdvL = opt.minimize(lambda theta : logistic_loss3(X_sp, royinv_sp(Z_sp, theta))[0],
+AdvL0 = opt.minimize(lambda theta : logistic_loss3(X_sp, royinv_sp(Z_sp, theta))[0],
                     x0 = theta_0.cpu().numpy(),
                     method='Nelder-Mead',
                     bounds = list(zip(lower_bounds.cpu().numpy(), upper_bounds.cpu().numpy())),
                     options={'return_all' : True, 'disp' : True, 'adaptive' : True})
 #AdvL = torch.tensor(AdvL.x, device=device)
-AdvL = torch.tensor(AdvL.x, device=device, dtype=true_theta.dtype)
-print(f"Pre-estimation: {AdvL}") """
+AdvL0 = torch.tensor(AdvL0.x, device=device, dtype=true_theta.dtype)
+print(f"Pre-estimation: {AdvL0}")
 
 
 """ #Pre-estimation with the logistic discriminator
@@ -98,21 +98,38 @@ for s in range(S):
         bX = X[biX]
         #print(bU)
         #print(bX)
+        """"
+        bU_sp = bU.cpu().numpy()
+        bX_sp = bX.cpu().numpy()
+        # Pre-estimate with logistic regression
+        AdvL = opt.minimize(lambda theta : logistic_loss3(bX_sp, royinv_sp(bU_sp, theta))[0],
+                            x0 = AdvL.cpu().numpy(),
+                            method='Nelder-Mead',
+                            bounds = list(zip(lower_bounds.cpu().numpy(), upper_bounds.cpu().numpy())),
+                            options={'return_all' : True, 'disp' : True, 'adaptive' : True})
+        AdvL = torch.tensor(AdvL.x, device=device, dtype=true_theta.dtype)
+        print(f"Pre-estimatin in repetition {s}: {AdvL}")    
+        """
 
         # Initial guess uniform within the bounds
-        intial_guess = wide_lower_bounds + (wide_upper_bounds - wide_lower_bounds) * torch.rand(8, device=device)
+        #intial_guess = wide_lower_bounds + (wide_upper_bounds - wide_lower_bounds) * torch.rand(8, device=device)
         #intial_guess = torch.tensor([5., -5., -5., 5., 5., 5., -.5, -.5], device=device)
         #intial_guess = torch.tensor([2.5, 0.5, 0, -0.5, 0.5, 1.5, -0.9, 0.9], device=device)
-        generator = Generator(intial_guess, lambda_).to(device)
-        optimizerG = torch.optim.Adam(generator.parameters())
+        initial_guess = AdvL0.clone().detach()
+        lambda_ = lambda_.clone().detach()
+        #print(f"Initial guess in repetition {s}: {initial_guess}")
+        generator = Generator(initial_guess, lambda_).to(device)
+        optimizerG = torch.optim.Adam(generator.parameters(), lr=0.0002)
 
-        for i in range(n_generator):
+        for i in tqdm(range(n_generator)):
             try:
+                Z = torch.rand(m, 4).to(device)
+                X = royinv(Z, true_theta, lambda_=lambda_).detach()
                 optimizerG.zero_grad()
-                fake_samples = generator.forward(bU.detach())  # Detach Z instead of fake_samples
-                generator_loss = wasserstein(bX.detach(), fake_samples)
+                fake_samples = generator.forward(Z.detach())
+                generator_loss = wasserstein(X.detach(), fake_samples)
                 all_params[s, :, i] = generator.theta.detach()
-                all_losses[s, i] = generator_loss.item()  # Use .item() instead of .detach()
+                all_losses[s, i] = generator_loss.item()
                 generator_loss.backward()
                 #print(generator.theta.grad)
                 optimizerG.step()

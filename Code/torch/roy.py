@@ -4,7 +4,6 @@ import numpy as np
 from scipy.stats import norm#, lognorm
 from scipy.linalg import sqrtm
 
-
 def mvn_inverse_cdf(u, mu, sigma):
     # Compute the square root of sigma using eigendecomposition
     eigenvalues, eigenvectors = torch.linalg.eigh(sigma)
@@ -96,6 +95,62 @@ def royinv(noise, theta, lambda_ = 0):
                                              lambda_ * torch.std(log_w_2_1 - log_w_2_2)).cdf(log_w_2_1 - log_w_2_2)
 
     return torch.stack([log_w_1, d_1, log_w_2, d_2], dim = 1)
+
+def soft_royinv(noise, theta):
+    if len(theta) == 7:
+        mu_1, mu_2, gamma_1, gamma_2, sigma_1, sigma_2, rho_s = theta
+        rho_t = torch.tensor(0., device=theta.device)
+        beta = torch.tensor(0.9, device=theta.device)
+    elif len(theta) == 8:
+        mu_1, mu_2, gamma_1, gamma_2, sigma_1, sigma_2, rho_s, rho_t = theta
+        beta = torch.tensor(0.9, device=theta.device)
+    elif len(theta) == 9:
+        mu_1, mu_2, gamma_1, gamma_2, sigma_1, sigma_2, rho_s, rho_t, beta = theta
+
+    # Covariance matrix
+    Sigma = torch.stack([
+        torch.stack([sigma_1**2, rho_s * sigma_1 * sigma_2, rho_t * sigma_1**2, rho_s * rho_t * sigma_1 * sigma_2]),
+        torch.stack([rho_s * sigma_1 * sigma_2, sigma_2**2, rho_s * rho_t * sigma_1 * sigma_2, rho_t * sigma_2**2]),
+        torch.stack([rho_t * sigma_1**2, rho_s * rho_t * sigma_1 * sigma_2, sigma_1**2, rho_s * sigma_1 * sigma_2]),
+        torch.stack([rho_s * rho_t * sigma_1 * sigma_2, rho_t * sigma_2**2, rho_s * sigma_1 * sigma_2, sigma_2**2])
+    ], dim=0)
+
+    # Shocks
+    epsilons = mvn_inverse_cdf(noise, torch.zeros(4, device=theta.device), Sigma)
+    eps_1_1 = epsilons[:,0]
+    eps_1_2 = epsilons[:,1]
+    eps_2_1 = epsilons[:,2]
+    eps_2_2 = epsilons[:,3]
+
+    # Log wages at t = 1 for each sector
+    log_w_1_1 = mu_1 + eps_1_1
+    log_w_1_2 = mu_2 + eps_1_2
+
+    # Log value functions at t = 1 for each sector
+    log_v_1_1 = torch.logaddexp(log_w_1_1,
+                             torch.log(beta) + logEexpmax(mu_1 + gamma_1, mu_2, sigma_1, sigma_2, rho_s))
+    
+    log_v_1_2 = torch.logaddexp(log_w_1_2,
+                              torch.log(beta) + logEexpmax(mu_1, mu_2 + gamma_2, sigma_1, sigma_2, rho_s))
+    
+    # Sector choices at t = 1
+    d_1 = torch.sigmoid(log_v_1_1 - log_v_1_2)
+
+    # Observed log wages at t = 1
+    log_w_1 = d_1 * log_w_1_1 + (1 - d_1) * log_w_1_2
+
+    # Log wages at t = 2 for each sector
+    log_w_2_1 = d_1 * (mu_1 + gamma_1 + eps_2_1) + (1 - d_1) * (mu_1 + eps_2_1)
+    log_w_2_2 = d_1 * (mu_2 + eps_2_2) + (1 - d_1) * (mu_2 + gamma_2 + eps_2_2)
+
+    # Sector choices at t = 2
+    d_2 = torch.sigmoid(log_w_2_1 - log_w_2_2)
+
+    # Observed log wages at t = 2
+    log_w_2 = d_2 * log_w_2_1 + (1 - d_2) * log_w_2_2
+
+    return torch.stack([log_w_1, d_1, log_w_2, d_2], dim = 1)
+
 
 """ # Testing 
 u = torch.rand(300, 4)

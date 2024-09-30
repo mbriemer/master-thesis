@@ -6,7 +6,7 @@ from geomloss import SamplesLoss
 
 from roy import royinv
 from NND import Discriminator_paper, My_old_discriminator, generator_loss
-from other_discriminators import logistic_loss2
+from other_discriminators import logistic_loss3
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
@@ -20,7 +20,8 @@ S = 1
 # Neural net hyperparameters
 n_discriminator = 1000
 criterion = torch.nn.BCELoss()
-wasserstein = SamplesLoss("sinkhorn", p=2, blur=0.01) # Approximately Wasserstein-p distance
+wasserstein1 = SamplesLoss("sinkhorn", p=1, blur=0.01) # Approximately Wasserstein-p distance
+wasserstein2 = SamplesLoss("sinkhorn", p=2, blur=0.01) # Approximately Wasserstein-p distance
 
 # True parameter values
 true_theta = torch.tensor([1.8, 2, 0.5, 0, 1, 1, 0.5, 0], device=device)
@@ -31,15 +32,18 @@ wide_upper_bounds = torch.tensor([10, 10, 10, 10, 10, 10, 1, 1], device=device)
 
 ### Loss plots
 K = 30
-param_ranges = [torch.linspace(start, end, K, device=device) for start, end in zip(wide_lower_bounds, wide_upper_bounds)]
+param_ranges = [torch.linspace(start, end, K, device=device) for start, end in zip(lower_bounds, upper_bounds)]
 
 cD_grid = torch.zeros((len(true_theta), K), device=device)
 NND_grid = torch.zeros((len(true_theta), K), device=device)
 OracleD_grid = torch.zeros((len(true_theta), K), device=device)
 LL_grid = torch.zeros((len(true_theta), K), device=device)
+wasserstein1_grid = torch.zeros((len(true_theta), K), device=device)
+wasserstein2_grid = torch.zeros((len(true_theta), K), device=device)
 
 cd_grid_diag = torch.zeros((2, K), device=device)
-NND_grid_diag = torch.zeros((2, K), device=device)
+wasserstein1_grid_diag = torch.zeros((2, K), device=device)
+wasserstein2_grid_diag = torch.zeros((2, K), device=device)
 
 param_names = [
         r'$\mu_1$',
@@ -63,17 +67,25 @@ for i in range(len(true_theta)):
         print(f'Parameter {i+1}/{len(true_theta)}, iteration {k+1}/{K}')
         theta = true_theta.clone()
         theta[i] = param_ranges[i][k]  
-        cD_grid[i, k] = logistic_loss2(X, royinv(Z, theta))[0]
-        #NND_grid[i, k] = generator_loss(X, royinv(Z, theta), My_old_discriminator, criterion, n_discriminator, g)
+        #cD_grid[i, k] = logistic_loss3(X, royinv(Z, theta))[0]
+        NND_grid[i, k] = generator_loss(X, royinv(Z, theta), My_old_discriminator, criterion, n_discriminator, g)
         #OracleD_grid[i, k] = OracleD(X, royinv(Z, th), theta, th)
         #LL_grid[i, k] = -np.mean(logroypdf(X, th)) / 2
+        wasserstein1_grid[i, k] = wasserstein1(X, royinv(Z, theta))
+        wasserstein2_grid[i, k] = wasserstein2(X, royinv(Z, theta))
 
-torch.save(cD_grid, 'simres/cD_grid.pt')
+#torch.save(cD_grid, 'simres/cD_grid.pt')
+torch.save(NND_grid, 'simres/NND_grid.pt')
+torch.save(wasserstein1_grid, 'simres/wasserstein1_grid.pt')
+torch.save(wasserstein2_grid, 'simres/wasserstein2_grid.pt')
 
 # Plotting
 
-cD_grid = cD_grid.detach().cpu().numpy()
-#NND_grid = NND_grid.detach().cpu().numpy()
+#cD_grid = cD_grid.detach().cpu().numpy()
+NND_grid = NND_grid.detach().cpu().numpy()
+wasserstein1_grid = wasserstein1_grid.detach().cpu().numpy()
+wasserstein2_grid = wasserstein2_grid.detach().cpu().numpy()
+
 true_theta = true_theta.cpu().numpy()
 param_ranges = [param_range.cpu().numpy() for param_range in param_ranges]
 lower_bounds = lower_bounds.cpu().numpy()
@@ -87,14 +99,16 @@ axs = axs.flatten()
 for i in range(len(true_theta)):
     ax = axs[i]
 
-   # ax.plot(param_ranges[i], NND_grid[i, :], linewidth=1.5, color='blue', label='NN')
-    ax.plot(param_ranges[i], cD_grid[i, :], linewidth=1.5, color='red', label='Logistic')
-
+    ax.plot(param_ranges[i], NND_grid[i, :] + 1.4, linewidth=1.5, color='blue', label='NN')
+    #ax.plot(param_ranges[i], cD_grid[i, :] + 1.4, linewidth=1.5, color='red', label='Logistic')
+    ax.plot(param_ranges[i], wasserstein1_grid[i, :], linewidth=1.5, color='green', label='Wasserstein-1')
+    ax.plot(param_ranges[i], wasserstein2_grid[i, :], linewidth=1.5, color='orange', label='Wasserstein-2')
+    
     ax.axvline(x=true_theta[i], color='black', linestyle='--', label=f'True {param_names[i]}')
 
     #max = torch.max([torch.max(NND_grid[i, :]), torch.max(cD_grid[i, :])])
     #min = torch.min([torch.min(NND_grid[i, :]), torch.min(cD_grid[i, :])])
-    ax.set_xlim(wide_lower_bounds[i], wide_upper_bounds[i])
+    ax.set_xlim(lower_bounds[i], upper_bounds[i])
     #ax.set_ylim(min, max)
 
     ax.legend(loc='best', frameon=False)

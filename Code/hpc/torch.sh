@@ -10,4 +10,4 @@ conda deactivate
 conda activate mt
 module load CUDA/12.4.0
 
-python $HOME/torch/main_case.py
+python $HOME/torch/main_case2.py

@@ -73,8 +73,8 @@ def logistic_loss2(X_1, X_2):
 
 def logistic_loss3(X_1, X_2):
     """Function "loss2" from main_case.m"""
-    log_w_1_1, d_1_1, log_w_2_1, d_2_1 = X_1
-    log_w_1_2, d_1_2, log_w_2_2, d_2_2 = X_2
+    log_w_1_1, d_1_1, log_w_2_1, d_2_1 = X_1[:, 0], X_1[:, 1], X_1[:, 2], X_1[:, 3]
+    log_w_1_2, d_1_2, log_w_2_2, d_2_2 = X_2[:, 0], X_2[:, 1], X_2[:, 2], X_2[:, 3]
     n = len(d_1_1)
     m = len(d_1_2)
     assert n == m, "n == m required for logistic regression loss"
