@@ -58,7 +58,7 @@ As the authors state in the readme file, the simulations for the Roy model are c
 They draw on functions in other files to simulate data and calculate losses.
 
 Both main files share a general structure:
-after setting parameters of the simulation itself (for example sample sizes, number of simulation runs) and the Roy model, the values of loss functions are calculated along a linear grid and then rendered to created Figures 6 and 8.
+after setting parameters of the simulation itself (for example sample sizes, number of simulation runs) and the Roy model, the values of loss functions are calculated along a linear grid and then rendered to create Figures 6 and 8.
 The grid describes seven- or eight-dimensional ``cross-hairs'', where one parameters is varied while the others remain fixed at the true value.
 Thereafter, real and fake observations are generated and an initial guess in generated.
 Then, the Roy model is estimated using multiple methods, which are implemented as constrained minimizations.% of a loss function which in turn calculates the discriminators. %TODO write better
@@ -89,11 +89,11 @@ Following simple maximum likelihood estimation with $\theta_0$ as an initial val
 They also estimate the Roy model using Indirect Inference and optimally-weighted SMM, but don't use the results.
 
 \texttt{Main\_case.m} simulates the untractable likelihood case.
-Therefore, an initial guess $\theta_0$ is drawn similarly algorithm \ref{alg:theta0}, but the first draw is used.
+Therefore, an initial guess $\theta_0$ is drawn similarly to algorithm \ref{alg:theta0}, but the first draw is used.
 Logistic regression is then perfomed using $\theta_0$ as an initial value, and the result used to initialized adversarial estimation. %TODO loss 1 and to
 Again, loss-curves for the neural network and logistic discriminator are plotted, including for $\rho_t$.
 To study the properties of the adversarial estimators, \textcite{kaji2023adversarial} then perform the bootstrap, sampling with replacement from the noise and the true observations independently.
-They perform estimation with the logistic discriminator using the previous logistic estimate as initial value.
+They perform estimation with the logistic discriminator using the previous logistic estimate as the initial value. %TODO the/an?
 The result of this serves as the initial value for estimation with the neural network discriminator, as well as for the Indirect Inference and optimally-weighted SMM estimators (but the authors don't report the Indirect Inference results in the paper). %TODO check working paper version
 
 %TODO keep writing
@@ -207,7 +207,7 @@ at at least for the neural network estimator with cross-entropy loss.
 Namely, the constant Jensen-Shannon divergence for disjoint distributions.
 To isolate the effect, I rotate part of the cross-hairs to look at the loss along the diagonal $\text{diag}_{1,2} = \{(\mu_1$, $\mu_2) = (m, m); m \in \mathbb{R}\}$.
 This way, the fake distribution can become disjoint from the real distribution without affecting the agents' choices.
-\footnote{There is a small distortion because $\mu_1 = 1.8 \neq 2.0 = \mu_2$.}
+Note, however that there is a the small distortion because $\mu_1 = 1.8 \neq 2.0 = \mu_2$.
 
 Figure \ref{fig:diagonal_loss_plots} shows the results:
 In the top row, a neural network discriminator approximates the JS divergence.
@@ -231,18 +231,24 @@ The right column plots the diagonal $\text{diag}_{1,-2} = \{(\mu_1$, $-\mu_2) = 
 
 \begin{table}
     \centering
-    \begin{tabular}{|l|cccccccc} %TODO fix layout
-    \hline
+    \begin{tabular}{lcccccccc} %TODO fix layout
+    \toprule
     & $\mu_1$ & $\mu_2$ & $\gamma_1$ & $\gamma_2$ & $\sigma_1$ & $\sigma_2$ & $\rho_s$ & $\rho_t$ \\
-    \hline
+    \midrule
     Wasserstein-1-discriminator & 1.81 & 1.91 & 0.58 & 0.06 & 0.92 & 1.01 & 0.43 & 0.06 \\
     & (0.14) & (0.12) & (0.08) & (0.02) & (0.04) & (0.10) & (0.12) & (0.03) \\
-    \hline
+    \midrule
     W1 uniform init & -0.97 & -0.74 & -1.31 & -2.36 & 1.78 & 2.05 & -0.10 & -0.05 \\
     & (4.48) & (4.19) & (4.72) & (4.95) & (1.88) & (1.99) & (0.67) & (0.53) \\
-    \hline
+    \midrule
     W2 uniform init & -0.99 & -0.57 & -1.93 & -1.92 & 1.83 & 1.72 & -0.00 & -0.04 \\
     & (4.54) & (4.27) & (5.15) & (4.77) & (1.79) & (1.70) & (0.71) & (0.54) \\
+    \midrule
+    JS uniform unit & -0.46 & -0.17 & -0.11 & 0.64 & 4.92 & 5.14 & -0.08 & 0.05 \\
+    & (6.03) & (5.96) & (5.81) & (5.88) & (2.92) & (2.89) & (0.59) & (0.57) \\
+    \midrule
+    True values & 1.80 & 2.00 & 0.50 & 0.00 & 1.00 & 1.00 & 0.00 & 0.50 \\ 
+    \bottomrule
     \end{tabular}
     \caption{Parameter estimates}
     \label{tab:parameter_estimates}
@@ -259,25 +265,30 @@ Figure \ref{fig:main_case_histrograms} visualizes the distribution of estimates.
 \begin{figure}
     \includegraphics[width=\textwidth]{./Images/wide_uniform_histograms.png}
     \caption{Results of 200 estimations with Wasserstein-1 loss and initial values that are uniform over broad intervals}
-    \label{fig:wide_uniform_histograms}
+    \label{fig:w1_wide_uniform_histograms}
 \end{figure}
-
 
 
 \begin{figure}
     \includegraphics[width=\textwidth]{./Images/w2_wide_uniform_histograms.png}
     \caption{Results of 200 estimations with Wasserstein-2 loss and initial values that are uniform over broad intervals}
-    \label{fig:wide_uniform_histograms}
+    \label{fig:w2_wide_uniform_histograms}
 \end{figure}
 
 The Wasserstein-1 estimator should have an advantage when starting far away from the true value.
 To verify this, I run a simulation that draws initial values over a uniform distribution from a wider set of parameter bounds.
 The results are summarized in the second row of table \ref{tab:parameter_estimates} and plotted in figure \ref{fig:wide_uniform_histograms}.
-The numerical comparision shows that they are much less precise than the pre-estimated estimates.
+The numerical comparison shows that they are much less precise than the pre-estimated estimates.
 However, checking the histograms reveals that the mode of the estimate is clearly distinct close to the true value for the location parameters and the variance.
 There is also a mode, albeit less clear, near the true $\rho_t$, but $\rho_s$ does not get estimated at all.
 In all cases, the distribution of estimates is quite wide, and in some cases, a significant amount is at the bounds of the considered intervals.
 
 Despite the plausibly superior theoe
 
-Comparision to authors' methods to follow\dots
+\begin{figure}
+    \includegraphics[width=\textwidth]{./Images/js_wide_uniform_histograms.png}
+    \caption{Results of 200 estimations with Jensen-Shannon loss and initial values that are uniform over broad intervals}
+    \label{fig:js_wide_uniform_histograms}
+\end{figure}
+
+Comparison to authors' methods to follow\dots

@@ -322,7 +322,7 @@ They take the following symbols from \textcite{vanderVaart2023}:
 ``$\rightsquigarrow$'' refers to weak convergence, defined in \textcite{vanderVaart2023} as follows:
 
 
-The first theorem states that for some reasonable conditions on the true and estimated criterion functions, which discuss below, the adversarial estimator is indeed consistent.
+The first theorem states that for some reasonable conditions on the true and estimated criterion functions, which I discuss below, the adversarial estimator is indeed consistent.
 
 \begin{theorem}[Theorem 1, KMP]
     \label{th:kmp_1}
@@ -337,20 +337,20 @@ The first theorem states that for some reasonable conditions on the true and est
 \end{theorem}
 
 Condition 1 is that the optimum $\theta_0$ is identified by the true criterion.
-Condition 2 is that the generator and discriminator terms of the cross-entropy criterion converge to the true distributions $P_0$ and $P_G$, respectively. %TODO: why log?????
+Condition 2 is that the generator and discriminator terms of the cross-entropy criterion converge to the true distributions $P_0$ and $P_Z$, respectively. %TODO: why log?????
 Condition 3 is that the estimated criterion converges uniformly to the true criterion in the entire parameter space.
 Condition 4 is that the estimated criterions of estimates $\hat{\theta}$ converge to the estimands $\theta$ at rate 1 in outer probability. %TODO true?
 
-The second theorem states that the estimator converges at a rate of $O^{*}_P(n^{-1/2})$ and requires multiple assumption.
+The second theorem gives a rate of convergence for the estimator and requires multiple assumptions.
 The first requires, roughly speaking, that the generator is parametric, that is, he depends smoothly on the parameters, has non-exploding, non-vanishing Fisher information, therefore can be stably inverted, and that the inverted generator is also parametric in this sense. %TODO think if true %TODO why does this imply parametric?
 
 \begin{assumption}[A1, KMP]
     \label{a:1}
     \begin{enumerate}
-        \item $\Theta$ is (a subset of) a Euclidean space 
-        \item $p_{\theta}$ is differentiable in $\theta$ at every $\theta \in \Theta$ for every $x \in \mathcal{X}$ with the derivative continuous in both $x$ and $\theta$; 
-        \item The maximum eigenvalue of the Fisher information $I_{\theta}=P_{\theta} \dot{\ell}_{\theta} \dot{\theta}_{\theta}^{\top}$ is bounded uniformly in $\theta \in \Theta$ 
-        \item the minimum eigenvalue of $I_{\theta}$ is bounded away from 0 uniformly in $\theta \in \Theta$.
+        \item $\Theta$ is (a subset of) a Euclidean space.
+        \item $p_{\theta}$ is differentiable in $\theta$ at every $\theta \in \Theta$ for every $x \in \mathcal{X}$ with the derivative continuous in both $x$ and $\theta$.
+        \item The maximum eigenvalue of the Fisher information $I_{\theta}=P_{\theta} \dot{\ell}_{\theta} \dot{\theta}_{\theta}^{\top}$ is bounded uniformly in $\theta \in \Theta$.
+        \item The minimum eigenvalue of $I_{\theta}$ is bounded away from 0 uniformly in $\theta \in \Theta$.
     \end{enumerate}
     The same is assumed for the ``inverted'' structural model $\widetilde{\mathcal{P}}_{\theta}=\left\{\left(\left(p_{0} / p_{\theta}\right) \circ T_{\theta}\right) p_{Z}: \theta \in \Theta\right\}$.
 \end{assumption}
@@ -386,7 +386,7 @@ That the true loss has approximately quadratic curvature near the optimum and th
 \begin{assumption}[A4, KMP]
     \label{a:4}
     \begin{enumerate}
-        \item There exists open $G \subset \Theta \subset \mathbb{R}^{k}$ containing $\theta_{0}$ in which $M_{\theta}\left(D_{\theta}\right)-M_{\theta_{0}}\left(D_{\theta_{0}}\right) \gtrsim h\left(\theta, \theta_{0}\right)^{2}$. 
+        \item There exists open $G \subset \Theta \subset \mathbb{R}^{k}$ containing $\theta_{0}$ in which $\mathbb{M}_{\theta}\left(D_{\theta}\right)-\mathbb{M}_{\theta_{0}}\left(D_{\theta_{0}}\right) \gtrsim h\left(\theta, \theta_{0}\right)^{2}$. 
         \item $h\left(\theta, \theta_{0}\right)^{2}=O\left(\int D_{\theta_{0}}\left(\sqrt{p_{\theta_{0}}}-\sqrt{p_{\theta}}\right)^{2}\right)$ as $\theta \rightarrow \theta_{0}$.
     \end{enumerate}
 \end{assumption}
@@ -415,7 +415,7 @@ Point 3 also implies the quadratic shape of the criterion demanded Assumption \r
 Now \textcite{kaji2023adversarial} arrive at their third theorem.
 It states the multinormal distribution towards which the standardized adversarial estimator weakly converges.
  
-\begin{theorem}[Theorm 3, KMP]
+\begin{theorem}[Theorem 3, KMP]
     \label{th:kmp_3}
     Under the conclusion of Theorem 2 and Assumptions 2, 3, and 5,
     \begin{equation}
@@ -434,7 +434,7 @@ This means that for the true parameter $\theta_0$, it simulates the true distrib
 This allows a simplification of theorem \ref{th:kmp_3} to the following efficiency result:
 
 \begin{theorem}[Corollary 4, KMP]
-    Under the conclusion of Theorem 3 and Assumption $6, \sqrt{n}\left(\hat{\theta}-\theta_{0}\right)=I_{\theta_{0}}^{-1} \sqrt{n}\left(\mathbb{P}_{0}-\mathbb{P}_{\theta_{0}}\right) \dot{\ell}_{\theta_{0}}+o_{P}^{*}(1) \rightsquigarrow N\left(0, I_{\theta_{0}}^{-1}\right)$.
+    Under the conclusion of Theorem 3 and Assumption 6, $\sqrt{n}\left(\hat{\theta}-\theta_{0}\right)=I_{\theta_{0}}^{-1} \sqrt{n}\left(\mathbb{P}_{0}-\mathbb{P}_{\theta_{0}}\right) \dot{\ell}_{\theta_{0}}+o_{P}^{*}(1) \rightsquigarrow N\left(0, I_{\theta_{0}}^{-1}\right)$.
 \end{theorem}
 
 \subsubsection{Applicability to simulations}
@@ -442,12 +442,12 @@ This allows a simplification of theorem \ref{th:kmp_3} to the following efficien
 
 \textcite{kaji2023adversarial} partially discuss the applicability of the theoretical results to their simulation study.
 It seems plausible that the requirements of Theorem \ref{th:kmp_1} are fulfilled by at least one their discriminators, and indeed their results show convergence and amicable loss landscapes.
-The discrete choice nature of the Roy model (which will be introduced below) seems problematic for the results on convergence and efficieny, which depend on the generator. %TOOD: move?
+The discrete choice nature of the Roy model (which will be introduced below) seems problematic for the results on convergence and efficiency, which depend on the generator. %TOOD: move?
 First, it is not obvious that it can be inverted, as required by Assumption \ref{a:1}.
 Second, because $d_1$ and $d_2$ are (crucial parts) of the observation, the generator is not differentiable and therefore not twice differentiable along $x$, as required by Assumptions \ref{a:1} and \ref{a:5}.
 
 Regarding my own simulations, of course the unchanged Roy model generator will preserve these difficulties.
-Focusing on the Sinkhorn approximation of the Wasserstein discriminator, it is beyond the scope of this thesis to check whether the results above can be transfered to this case.
+Focusing on the Sinkhorn approximation of the Wasserstein discriminator, it is beyond the scope of this thesis to check whether the results above can be transferred to this case.
 However, consider the simple example of learning only a location parameter.
 The population Wasserstein-1 distance will not show quadratic curvature near the optimum, violating Assumptions \ref{a:4} and \ref{a:5}. %TODO check
 Therefore, the Wasserstein-2 loss seems more promising to uphold the theoretical results.
