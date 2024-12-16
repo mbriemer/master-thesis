@@ -488,3 +488,4 @@ pyrightconfig.json
 !/latex/1_Content/Images/*.png
 *.npz
 *.pt
+/Code/hpcbackup/
