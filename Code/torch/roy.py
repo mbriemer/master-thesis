@@ -1,6 +1,27 @@
+"""Functions for generating observations from the Roy model."""
 import torch
 
 def mvn_inverse_cdf(u, mu, sigma):
+    """
+    Generate samples from a multivariate normal distribution using the inverse CDF method with eigendecomposition.
+
+    Similar to mvninv.m.
+
+    Parameters
+    ----------
+    u : torch.Tensor
+        A tensor of shape (n, d) containing the quantiles of the standard normal distribution.
+    mu : torch.Tensor
+        A tensor of shape (d,) containing the mean of the multivariate normal distribution.
+    sigma : torch.Tensor
+        A tensor of shape (d, d) containing the covariance matrix of the multivariate normal distribution.
+
+    Returns
+    -------
+    torch.Tensor
+        A tensor of shape (n, d) containing the samples from the multivariate normal distribution.
+
+    """
     # Compute the square root of sigma using eigendecomposition
     eigenvalues, eigenvectors = torch.linalg.eigh(sigma)
     L = torch.matmul(eigenvectors, torch.diag(torch.sqrt(torch.clamp(eigenvalues, min=0))))
@@ -14,7 +35,29 @@ def mvn_inverse_cdf(u, mu, sigma):
     return mu + torch.matmul(z, L.T)
 
 def logEexpmax(mu1, mu2, sig1, sig2, rho):
-    """logEexpmax.m"""
+    """
+    Compute the logarithm of the expected maximum of two jointly normal random variables.
+
+    Translation of logEexpmax.m.
+    
+    Parameters
+    ----------
+    mu1 : torch.Tensor
+        Mean of the first Gaussian random variable.
+    mu2 : torch.Tensor
+        Mean of the second Gaussian random variable.
+    sig1 : torch.Tensor
+        Standard deviation of the first Gaussian random variable (must be positive).
+    sig2 : torch.Tensor
+        Standard deviation of the second Gaussian random variable (must be positive).
+    rho : torch.Tensor
+        Correlation coefficient between the two Gaussian random variables (must be in [-1, 1]).
+
+    Returns
+    -------
+    torch.Tensor
+        The logarithm of the expected maximum of the two Gaussian random variables.
+    """
     theta = torch.sqrt((sig1 - sig2)**2 + 2 * (1 - rho) * sig1 * sig2)
     normal_dist = torch.distributions.Normal(0, 1)
 
@@ -27,7 +70,28 @@ def logEexpmax(mu1, mu2, sig1, sig2, rho):
     return e
 
 def royinv(noise, theta, lambda_ = 0):
-    """royinv.m"""
+    """
+    Generate observations from the Roy model (log wages and sector choices).
+    
+    Translation of royinv.m.
+    
+    Parameters
+    ----------
+    noise : torch.Tensor
+        Noise vector used for sampling shocks from a multivariate normal distribution.
+    theta : torch.Tensor of shape (7,) or (8,) or (9,)
+        A vector of economic parameters of the Roy model as defined in Section 3.2 of Kaji, Manresa and Pouliot (2023).
+        If the length of theta is 7, then beta is set to 0.9 and rho_t is set to 0.
+        If the length of theta is 8, then beta is set to 0.9.
+    lambda_ : float, optional
+        A parameter for smoothing sector choices (default is 0).
+
+    Returns
+    -------
+    torch.Tensor
+        A tensor of shape (n, 4) containing the log wages and sector choices for each individual in the sample.
+        The columns are: log wage at t = 1, sector choice at t = 1, log wage at t = 2, sector choice at t = 2.
+    """
     
     if len(theta) == 7:
         mu_1, mu_2, gamma_1, gamma_2, sigma_1, sigma_2, rho_s = theta
