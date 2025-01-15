@@ -1,8 +1,34 @@
-# Code for the neural network discriminator
+"""
+Code for the neural network discriminator.
+
+Translation of NND.m.
+"""
 
 import torch
 
-class Discriminator_paper(torch.nn.Module): #flat net like in the paper
+class Discriminator_paper(torch.nn.Module):
+    """
+    Flat discriminator neural network like the MATLAB patternnet used by Kaji, Manresa and Pouliot (2023).
+
+    Parameters
+    ----------
+    input_size : int, optional
+        Number of input features (default is 4).
+    hidden_size : int, optional
+        Number of hidden units (default is 10).
+    output_size : int, optional
+        Number of output units (default is 1).
+    
+    Attributes
+    ----------
+    layers : torch.nn.Sequential
+        Neural network layers.
+
+    Methods
+    -------
+    forward(x) -> torch.Tensor
+        Forward pass of the neural network.
+    """
     def __init__(self, input_size=4, hidden_size=10, output_size=1):
         super(Discriminator_paper, self).__init__()
         self.layers = torch.nn.Sequential(
@@ -17,6 +43,29 @@ class Discriminator_paper(torch.nn.Module): #flat net like in the paper
         return x    
 
 def NDD_train(true_samples, fake_samples, discriminator, optimizerD, criterion, n_discriminator = 15):
+    """
+    Train the discriminator for n_discriminator steps.
+
+    Parameters
+    ----------
+    true_samples : torch.Tensor
+        True samples to be classified.
+    fake_samples : torch.Tensor
+        Fake samples to be classified.
+    discriminator : torch.nn.Module
+        Discriminator neural network.
+    optimizerD : torch.optim.Optimizer
+        Optimizer for the discriminator.
+    criterion : torch.nn.Module
+        Loss function.
+    n_discriminator : int, optional
+        Number of training steps (default is 15).
+    
+    Returns
+    -------
+    torch.nn.Module
+        Trained discriminator.
+    """
     for _ in range(n_discriminator):
         optimizerD.zero_grad()
         
@@ -33,7 +82,30 @@ def NDD_train(true_samples, fake_samples, discriminator, optimizerD, criterion, 
     return discriminator
 
 def generator_loss(true_samples, fake_samples, DiscriminatorClass, criterion, n_discriminator=15, g=30):
-    """Train g discriminators and return the average loss"""
+    """
+    Train g discriminators and return the average loss.
+    
+    Parameters
+    ----------
+
+    true_samples : torch.Tensor
+        True samples to be classified.
+    fake_samples : torch.Tensor
+        Fake samples to be classified.
+    DiscriminatorClass : torch.nn.Module
+        Discriminator neural network class.
+    criterion : torch.nn.Module
+        Loss function.
+    n_discriminator : int, optional
+        Number of training steps (default is 15).
+    g : int, optional
+        Number of discriminators (default is 30).
+    
+    Returns
+    -------
+    torch.Tensor
+        Generator loss.    
+    """
     discriminators = [DiscriminatorClass().to(true_samples.device) for _ in range(g)]
     for d in discriminators:
         optimizerD = torch.optim.Adam(d.parameters())
