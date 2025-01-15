@@ -1,4 +1,8 @@
-"""Estimation simulation with Wasserstein"""
+"""
+Estimation simulation with Wasserstein and JS distances
+
+Partialy following the structure of main_case.m, especially of lines 307-380.
+"""
 import torch
 from torch.utils.data import RandomSampler
 from geomloss import SamplesLoss
@@ -23,6 +27,23 @@ wasserstein1 = SamplesLoss("sinkhorn", p=1, blur=0.01) # Approximately Wasserste
 wasserstein2 = SamplesLoss("sinkhorn", p=2, blur=0.01) # Approximately Wasserstein-p distance
 
 class Generator(torch.nn.Module):
+    """
+    A generator model for the Roy model.
+    
+    For usage in a pytorch training loop.
+
+    Attributes
+    ----------
+    theta : torch.nn.Parameter
+        Economic parameters of the Roy model of shape (7,) or (8,) or (9).
+    lambda_ : float
+        A parameter for smoothing sector choices.
+    
+    Methods
+    -------
+    forward(noise)
+        Generate observations from the Roy model given latent noise.   
+    """
     def __init__(self, intial_guess, lambda_=0):
         super(Generator, self).__init__()
         self.theta = torch.nn.Parameter(intial_guess)
@@ -32,6 +53,28 @@ class Generator(torch.nn.Module):
         return royinv(noise, self.theta, self.lambda_)
 
 def wasserstein_loss_1(X, U, theta, lambda_, device=device):
+    """
+    Compute the Wasserstein-1 distance between given and simulated observations
+    
+    Parameters
+    ----------
+    X : torch.Tensor
+        Given observations from the Roy model of shape (n, 4).
+    U : torch.Tensor
+        Latent noise of shape (m, 4) used for generating observations.
+    theta : torch.Tensor
+        Economic parameters of the Roy model of shape (7,) or (8,) or (9).
+    lambda_ : float
+        A parameter for smoothing sector choices.
+    device : torch.device, optional
+        Device on which the computations are performed (default is set elsewhere in this script).
+
+    Returns
+    -------
+    float
+        The Wasserstein-1 distance between given and simulated observations. 
+    """
+
     X = torch.tensor(X, device=device, dtype=torch.float32)
     U = torch.tensor(U, device=device, dtype=torch.float32)
     theta = torch.tensor(theta, device=device, dtype=torch.float32) 
@@ -41,6 +84,28 @@ def wasserstein_loss_1(X, U, theta, lambda_, device=device):
     return loss
 
 def wasserstein_loss_2(X, U, theta, lambda_, device=device):
+    """
+    Compute the Wasserstein-2 distance between given and simulated observations.
+
+    Parameters
+    ----------
+    X : torch.Tensor
+        Given observations from the Roy model of shape (n, 4).
+    U : torch.Tensor
+        Latent noise of shape (m, 4) used for generating observations.
+    theta : torch.Tensor
+        Economic parameters of the Roy model of shape (7,) or (8,) or (9).
+    lambda_ : float
+        A parameter for smoothing sector choices.
+    device : torch.device, optional
+        Device on which the computations are performed (default is set elsewhere in this script).
+    
+    Returns
+    -------
+    float
+        The Wasserstein-2 distance between given and simulated observations.  
+    """
+
     X = torch.tensor(X, device=device, dtype=torch.float32)
     U = torch.tensor(U, device=device, dtype=torch.float32)
     theta = torch.tensor(theta, device=device, dtype=torch.float32) 
@@ -50,6 +115,28 @@ def wasserstein_loss_2(X, U, theta, lambda_, device=device):
     return loss
 
 def jensen_shannon_loss(X, U, theta, lambda_, device=device):
+    """
+    Approximate the Jensen-Shannon divergence between given and simulated observations.
+
+    Parameters
+    ----------
+    X : torch.Tensor
+        Given observations from the Roy model of shape (n, 4).
+    U : torch.Tensor
+        Latent noise of shape (m, 4) used for generating observations.
+    theta : torch.Tensor
+        Economic parameters of the Roy model of shape (7,) or (8,) or (9).
+    lambda_ : float
+        A parameter for smoothing sector choices.
+    device : torch.device, optional
+        Device on which the computations are performed (default is set elsewhere in this script).
+    
+    Returns
+    -------
+    float
+        An approximation of the Jensen-Shannon divergence between given and simulated observations.
+    """
+
     X = torch.tensor(X, device=device, dtype=torch.float32).detach()
     U = torch.tensor(U, device=device, dtype=torch.float32).detach()
     theta = torch.tensor(theta, device=device, dtype=torch.float32).detach()
