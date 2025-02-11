@@ -3,13 +3,53 @@ from scipy.stats import norm#, lognorm
 from scipy.linalg import sqrtm
 
 def mvn_inverse_cdf(u, mu, sigma):
-    """mvinv.m"""
+    """
+    Generate samples from a multivariate normal distribution using the inverse CDF method.
+    
+    Translation of mvinv.m.
+
+    Parameters
+    ----------
+    u : np.ndarray
+        An array of shape (n, d) containing the quantiles of the standard normal distribution.
+    mu : np.ndarray
+        An array of shape (d,) containing the mean of the multivariate normal distribution.
+    sigma : np.ndarray
+        An array of shape (d, d) containing the covariance matrix of the multivariate normal distribution.
+
+    Returns
+    -------
+    np.ndarray
+        An array of shape (n, d) containing the samples from the multivariate normal distribution.
+    """
     L = np.real(sqrtm(sigma))
     z = norm.ppf(u)
     return mu + np.matmul(z, L.T)
 
 def logEexpmax(mu1, mu2, sig1, sig2, rho):
-    """logEexpmax.m"""
+    """
+    Compute the logarithm of the expected maximum of two jointly normal random variables.
+
+    Translation of logEexpmax.m.
+    
+    Parameters
+    ----------
+    mu1 : float
+        Mean of the first Gaussian random variable.
+    mu2 : float
+        Mean of the second Gaussian random variable.
+    sig1 : float
+        Standard deviation of the first Gaussian random variable (must be positive).
+    sig2 : float
+        Standard deviation of the second Gaussian random variable (must be positive).
+    rho : float
+        Correlation coefficient between the two Gaussian random variables (must be in [-1, 1]).
+
+    Returns
+    -------
+    float
+        The logarithm of the expected maximum of the two Gaussian random variables.    
+    """
     theta = np.sqrt((sig1 - sig2)**2 + 2 * (1 - rho) * sig1 * sig2)
     normal_dist = norm(0, 1)
 
@@ -22,7 +62,33 @@ def logEexpmax(mu1, mu2, sig1, sig2, rho):
     return e
 
 def royinv(noise, theta, lambda_ = 0):
-    """royinv.m"""
+    """
+    Generate observations from the Roy model (log wages and sector choices).
+    
+    Translation of royinv.m.
+    
+    Parameters
+    ----------
+    noise : np.ndarray
+        An array of shape (n, 4) containing the quantiles of the standard normal distribution.
+    theta : np.ndarray
+        A vector of economic parameters of the Roy model as defined in Section 3.2 of Kaji, Manresa and Pouliot (2023).
+        If the length of theta is 7, then beta is set to 0.9 and rho_t is set to 0.
+        If the length of theta is 8, then beta is set to 0.9.
+    lambda_ : float, optional
+        A scalar representing the strength of the perturbation (default is 0).
+    
+    Returns
+    -------
+    np.ndarray
+        An array of shape (n,) containing the log wages at t = 1.
+    np.ndarray
+        An array of shape (n,) containing the sector choices at t = 1.
+    np.ndarray
+        An array of shape (n,) containing the log wages at t = 2.
+    np.ndarray
+        An array of shape (n,) containing the sector choices at t = 2.    
+    """
     
     if len(theta) == 7:
         mu_1, mu_2, gamma_1, gamma_2, sigma_1, sigma_2, rho_s = theta
@@ -85,7 +151,31 @@ def royinv(noise, theta, lambda_ = 0):
     return log_w_1, d_1, log_w_2, d_2
 
 def lognmaxpdf(x,mu_1,mu_2,sig_1,sig_2,rho):
-    """lognmaxpdf from logroypdf.m"""
+    """
+    Calculate the logarithm of the pdf of the maximum of two normal random variables.
+    
+    Translation of lognmaxpdf (line 129-160) from logroypdf.m.
+
+    Parameters
+    ----------
+    x : float
+        The value at which to evaluate the pdf. 
+    mu_1 : float
+        Mean of the first Gaussian random variable.
+    mu_2 : float
+        Mean of the second Gaussian random variable.
+    sig_1 : float
+        Standard deviation of the first Gaussian random variable (must be positive).
+    sig_2 : float
+        Standard deviation of the second Gaussian random variable (must be positive).
+    rho : float
+        Correlation coefficient between the two Gaussian random variables (must be in [-1, 1]).
+
+    Returns
+    -------
+    float
+        The logarithm of the pdf of the maximum of the two Gaussian random variables.
+    """
     if rho == 1:
         if norm.logcdf(x, mu_1, sig_1) < norm.logcdf(x, mu_2, sig_2):
             return norm.lopdf(x, mu_1, sig_1)
@@ -110,7 +200,37 @@ def lognmaxpdf(x,mu_1,mu_2,sig_1,sig_2,rho):
         return np.logaddexp(p_1, p_2)
 
 def logexpnmaxpdf(z,a,b,mu1,mu2,sig1,sig2,rho):
-    """logexpnmaxpdf from logroypdf.m"""
+    """
+    Calculate the logarithm of the pdf of the maximum of two shifted lognormal random variables.
+    
+    Translation of logexpnmaxpdf (lines 115-125) from logroypdf.m.
+    Computes the log likelihood of Z = max(a+exp(X), b+exp(Y)) where X and Y follow a bivariate normal distribution:
+    [X,Y] ~ N([mu1,mu2], [[sig1^2, rho*sig1*sig2], [rho*sig1*sig2, sig2^2]])
+
+    Parameters
+    ----------
+    z : float
+        The value at which to evaluate the pdf.
+    a : float
+        First shift parameter.
+    b : float
+        Second shift parameter.
+    mu1 : float
+        Mean of the first Gaussian random variable.
+    mu2 : float
+        Mean of the second Gaussian random variable.
+    sig1 : float
+        Standard deviation of the first Gaussian random variable (must be positive).
+    sig2 : float
+        Standard deviation of the second Gaussian random variable (must be positive).
+    rho : float
+        Correlation coefficient between the two Gaussian random variables (must be in [-1, 1]).
+
+    Returns
+    -------
+    p : ndarray
+        Log probability density function evaluated at the specified points.
+    """
     p = np.full_like(z, -np.inf)
     j = np.argwhere(z > np.maximum(a,b))#, 1, 0)
     logzb = np.log(z[j] - b)
@@ -127,7 +247,24 @@ def logexpnmaxpdf(z,a,b,mu1,mu2,sig1,sig2,rho):
     return p
 
 def logroypdf(y, theta):
-    """logroypdf.m"""
+    """
+    Calculate the logarithm of the pdf of obversations from the Roy model.
+
+    Translation of (most of) logroypdf.m.
+    Comments carried over from there.
+
+    Parameters
+    ----------
+    y : np.ndarray
+        An array of shape (n, 4) containing the observations from the Roy model.
+    theta : np.ndarray
+        A vector of economic parameters of the Roy model, with rho_t set to 0.
+
+    Returns
+    -------
+    np.ndarray
+        An array of shape (n,) containing the logarithm of the pdf of the observations.    
+    """
     mu_1, mu_2, gamma_1, gamma_2, sigma_1, sigma_2, rho_s = theta
     beta = 0.9
 
@@ -217,7 +354,25 @@ def logroypdf(y, theta):
     return p11 + p12 + p21 + p22
 
 def roysupp(y, theta):
-    """roysupp.m"""
+    """
+    Check if points are outside the support of the Roy model.
+    
+    Evaluates whether given points lie outside the support of logroypdf with 
+    specified parameters. Returns positive values for points outside the support.
+    Translation of roysupp.m.
+
+    Parameters
+    ----------
+    y : np.ndarray
+        An array of shape (n, 4) containing the observations from the Roy model.
+    theta : np.ndarray
+        A vector of economic parameters of the Roy model, with rho_t set to 0.
+    
+    Returns
+    -------
+    np.ndarray
+        Indicator values. Positive values indicate points outside the support of the Roy model with the given parameters.    
+    """
 
     mu_1, mu_2, gamma_1, gamma_2, sigma_1, sigma_2, rho_s = theta
     beta = 0.9
@@ -239,7 +394,29 @@ def roysupp(y, theta):
     return c
 
 def perturb(X, true_theta, lower_bounds, upper_bounds, rng):
-    """Lines 320-328 of main_roy.m"""
+    """
+    Perturb the true parameter vector by adding normal noise, while ensuring it is within the support of the Roy model.
+    
+    Translation of lines 320-328 of main_roy.m.
+    
+    Parameters
+    ----------
+    X : np.ndarray
+        An array of shape (n, 4) containing the observations from the Roy model.
+    true_theta : np.ndarray
+        A vector of economic parameters of the Roy model, with rho_t set to 0.
+    lower_bounds : np.ndarray
+        A vector of lower bounds for the economic parameters.
+    upper_bounds : np.ndarray
+        A vector of upper bounds for the economic parameters.
+    rng : np.random.Generator
+        A random number generator.
+    
+    Returns
+    -------
+    np.ndarray
+        A perturbed parameter vector that lies within the support of the Roy model.
+    """
     while True:
         theta_perturbed = true_theta + rng.normal(0, 0.2, len(true_theta))
         theta_perturbed = np.clip(theta_perturbed, lower_bounds, upper_bounds)
@@ -247,6 +424,25 @@ def perturb(X, true_theta, lower_bounds, upper_bounds, rng):
             return theta_perturbed
 
 def perturb_uniform(X, lower_bounds, upper_bounds, rng):
+    """
+    Sample a parameter vector from a uniform distribution, while ensuring it is within the support of the Roy model.
+
+    Parameters
+    ----------
+    X : np.ndarray
+        An array of shape (n, 4) containing the observations from the Roy model.
+    lower_bounds : np.ndarray
+        A vector of lower bounds for the economic parameters.
+    upper_bounds : np.ndarray
+        A vector of upper bounds for the economic parameters.
+    rng : np.random.Generator
+        A random number generator.
+
+    Returns
+    -------
+    np.ndarray
+        A parameter vector that lies within the support of the Roy model.
+    """
     while True:
         theta_perturbed = rng.uniform(low=lower_bounds, high=upper_bounds)
         if roysupp(X, theta_perturbed) <= 0:
@@ -264,4 +460,3 @@ upper_bounds = np.array([3, 3, 1.5, 1, 2, 2, 1])
 perturbed_theta = perturb(true_values, theta, lower_bounds, upper_bounds)
 print(perturbed_theta)
 """
-
