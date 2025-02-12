@@ -5,7 +5,25 @@ from sklearn.linear_model import LogisticRegression
 from roy import logroypdf, royinv
 
 def logistic_loss(X_1, X_2):
-    """Functions "loss" from main_roy.m and "loss1" from main_case.m"""
+    """
+    Caclulate a logistic regression loss between two equally-dimensional Roy model samples X_1 and X_2.
+
+    Translation of the functions "loss" from main_roy.m and "loss1" from main_case.m.
+    
+    Parameters
+    ----------
+    X_1 : array-like, shape (n, 4)
+        First sample.
+    X_2 : array-like, shape (m, 4)
+        Second sample.
+
+    Returns
+    -------
+    v : float
+        Loss value.
+    coefficients : array-like, shape (7,)
+        Coefficients of the logistic regression model.    
+    """
     log_w_1_1, d_1_1, log_w_2_1, d_2_1 = X_1
     log_w_1_2, d_1_2, log_w_2_2, d_2_2 = X_2
     n = len(d_1_1)
@@ -31,7 +49,25 @@ def logistic_loss(X_1, X_2):
     return v, coefficients
 
 def logistic_loss_2(X_1, X_2):
-    """Function "loss2" from main_case.m"""
+    """
+    Calculate a logistic regression loss between two equally-dimensional Roy model samples X_1 and X_2. 
+    
+    Translation of the function "loss2" from main_case.m.
+    
+    Parameters
+    ----------
+    X_1 : array-like, shape (n, 4)
+        First sample.   
+    X_2 : array-like, shape (m, 4)
+        Second sample.
+
+    Returns
+    -------
+    v : float
+        Loss value.
+    coefficients : array-like, shape (7,)
+        Coefficients of the logistic regression model.
+    """
     log_w_1_1, d_1_1, log_w_2_1, d_2_1 = X_1
     log_w_1_2, d_1_2, log_w_2_2, d_2_2 = X_2
     n = len(d_1_1)
@@ -57,7 +93,27 @@ def logistic_loss_2(X_1, X_2):
     return v, coefficients
 
 def OracleD(x, y, th_x, th_y):
-    """OracleD.m"""
+    """
+    Calculate the value of the oracle discriminator between two simulated Roy model samples.
+    
+    Translation of OracleD.m.
+    
+    Parameters
+    ----------
+    x : array-like, shape (n, 4)
+        First sample.
+    y : array-like, shape (m, 4)
+        Second sample.
+    th_x : array-like, shape (7,)
+        Economic parameters of the Roy model for the first sample.
+    th_y : array-like, shape (7,)
+        Economic parameters of the Roy model for the second sample.
+
+    Returns
+    -------
+    v : float
+        Oracle discriminator value.    
+    """
     logpxx = logroypdf(x, th_x)
     logpxy = logroypdf(x, th_y)
     logpyx = logroypdf(y, th_x)
